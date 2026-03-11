@@ -3,29 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
 # Virtual environments
 venv/
-ENV/
-env/
-.venv
+.venv/
 
 # IDE
 .vscode/
@@ -34,28 +15,25 @@ env/
 *.swo
 *~
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Jupyter
+.ipynb_checkpoints/
 
-# Data files
-*.csv
-*.pkl
-*.pickle
-*.h5
-*.hdf5
+# Data (large binary files)
+qlib_data/
+data/*.json
+data/*.csv
+data/*.txt
 
 # Logs
 logs/
 *.log
 
+# MLflow
+mlruns/
+
+# Results (generated)
+results/
+
 # OS
 .DS_Store
 Thumbs.db
-
-# Qlib data
-qlib_data/
-qlib_test_data/
-
-# Results and models (可根据需要调整)
-# results/
-# models/
