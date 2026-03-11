@@ -55,10 +55,20 @@ python scripts/collect_data.py --start 2023-01-01 --max 100
 ### 3. 运行回测
 
 ```bash
+# v2 默认: 滚动训练 vs 固定训练对比
 python scripts/run_qlib_strategy.py
+
+# 只跑滚动训练 (更快)
+python scripts/run_qlib_strategy.py --mode rolling
+
+# 调整滚动步长 (默认20天)
+python scripts/run_qlib_strategy.py --step 10
+
+# 指定回测区间
+python scripts/run_qlib_strategy.py --period 2025
 ```
 
-自动完成：因子计算 → 模型训练 → 多方案回测对比 → 输出最优结果。
+自动完成：因子计算 → 滚动训练 → 信号融合 → 股票过滤 → 回测对比 → 输出最优结果。
 
 ## 技术方案
 
@@ -66,13 +76,14 @@ python scripts/run_qlib_strategy.py
 
 Alpha158：Qlib 内置的 158 个量价技术因子，覆盖 K线形态、动量/反转、波动率、量价关系等。
 
-### 模型
+### 模型 (v2)
 
-LightGBM 梯度提升树：
-- 标签：未来2日收益率（cross-sectional rank normalized）
-- 训练期：2023-01 ~ 2025-03（2年3个月）
-- 验证期：2025-04（1个月，用于 early stopping）
-- 测试期：2025-05 ~ 2025-08（4个月）
+LightGBM 梯度提升树 + **滚动训练 + 多标签融合**：
+
+- **滚动训练**: 每 20 个交易日用最新数据重训模型，自动适应市场风格变化
+- **多标签融合**: 2日(×0.5) + 5日(×0.3) + 10日(×0.2) 预测信号加权合并
+- **股票过滤**: 自动过滤涨跌停、低流动性、次新股
+- **特征分析**: 输出 Top 重要因子，理解模型关注的市场信号
 
 ### 选股
 
