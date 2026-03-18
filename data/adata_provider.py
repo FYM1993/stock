@@ -33,6 +33,40 @@ class ADataProvider:
         logger.info(f"获取到 {len(df)} 只股票")
         return df
 
+    def save_stock_info(self, stock_df: pd.DataFrame = None):
+        """
+        保存股票信息列表（含名称、上市日期等），用于 ST/科创板/次新股过滤。
+        保存为 CSV: qlib_data/cn_data/stock_info.csv
+        """
+        if stock_df is None:
+            stock_df = self.get_stock_list()
+
+        info = stock_df.copy()
+        info["symbol"] = info.apply(
+            lambda r: f"{r['stock_code']}.{r['exchange']}", axis=1
+        )
+
+        # 标记 ST
+        info["is_st"] = info["short_name"].str.contains(
+            r"ST|退市", case=False, na=False
+        )
+        # 标记科创板 (688xxx)
+        info["is_kcb"] = info["stock_code"].str.startswith("688")
+        # 标记北交所 (exchange=BJ)
+        info["is_bj"] = info["exchange"] == "BJ"
+
+        out_path = self.qlib_data_path / "stock_info.csv"
+        info.to_csv(out_path, index=False, encoding="utf-8-sig")
+
+        n_st = info["is_st"].sum()
+        n_kcb = info["is_kcb"].sum()
+        n_bj = info["is_bj"].sum()
+        logger.info(
+            f"✓ 保存股票信息: {len(info)} 只 → {out_path} "
+            f"(ST={n_st}, 科创板={n_kcb}, 北交所={n_bj})"
+        )
+        return info
+
     def get_stock_daily(
         self,
         stock_code: str,
@@ -50,7 +84,7 @@ class ADataProvider:
             adjust_type: 1=前复权 2=后复权 0=不复权
 
         Returns:
-            DataFrame[date, open, close, high, low, volume]
+            DataFrame[date, open, close, high, low, volume, amount, vwap]
         """
         try:
             df = adata.stock.market.get_market(
@@ -63,13 +97,19 @@ class ADataProvider:
             if df is None or df.empty:
                 return None
 
+            volume = df["volume"].astype(float)
+            amount = df["amount"].astype(float) if "amount" in df.columns else (volume * df["close"].astype(float))
+            vwap = np.where(volume > 0, amount / volume, df["close"].astype(float))
+
             result = pd.DataFrame({
                 "date": pd.to_datetime(df["trade_date"]),
                 "open": df["open"].astype(float),
                 "close": df["close"].astype(float),
                 "high": df["high"].astype(float),
                 "low": df["low"].astype(float),
-                "volume": df["volume"].astype(float),
+                "volume": volume,
+                "amount": amount,
+                "vwap": vwap,
             })
             result = result.set_index("date").sort_index()
             return result
@@ -91,7 +131,7 @@ class ADataProvider:
             start_date: 开始日期
 
         Returns:
-            DataFrame[date, open, close, high, low, volume]
+            DataFrame[date, open, close, high, low, volume, amount, vwap]
         """
         try:
             df = adata.stock.market.get_market_index(
@@ -101,13 +141,19 @@ class ADataProvider:
             if df is None or df.empty:
                 return None
 
+            volume = df["volume"].astype(float)
+            amount = df["amount"].astype(float) if "amount" in df.columns else (volume * df["close"].astype(float))
+            vwap = np.where(volume > 0, amount / volume, df["close"].astype(float))
+
             result = pd.DataFrame({
                 "date": pd.to_datetime(df["trade_date"]),
                 "open": df["open"].astype(float),
                 "close": df["close"].astype(float),
                 "high": df["high"].astype(float),
                 "low": df["low"].astype(float),
-                "volume": df["volume"].astype(float),
+                "volume": volume,
+                "amount": amount,
+                "vwap": vwap,
             })
             result = result.set_index("date").sort_index()
             return result

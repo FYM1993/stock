@@ -46,81 +46,98 @@ class QlibDataConverter:
     
     def convert_single_stock(self, symbol: str, append: bool = True):
         """
-        转换单只股票/指数的数据（对齐日历）
-        
+        转换单只股票/指数的数据为 Qlib 二进制格式。
+
+        Qlib bin 格式:
+          - 前 4 字节: float32 起始日历索引 (start_index)
+          - 后续 N×4 字节: float32 数据值 (从 start_index 到 end_index)
+        只存储有效范围内的数据，不存全日历长度的 NaN。
+
         Args:
-            symbol: 股票代码，如 '000001.SZ' 或 'sh000300'
+            symbol: 股票代码，如 '000001.SZ'
             append: 是否追加到已有数据（True）还是覆盖（False）
         """
         csv_file = self.csv_dir / f"{symbol}.csv"
-        
+
         if not csv_file.exists():
             logger.warning(f"CSV文件不存在: {csv_file}")
             return False
-        
+
         try:
-            # 读取CSV
             df = pd.read_csv(csv_file)
-            
+
             if df.empty:
                 logger.warning(f"{symbol}: CSV数据为空")
                 return False
-            
-            # 处理日期列（支持中文和英文列名）
+
             date_col = None
             if 'date' in df.columns:
                 date_col = 'date'
             elif '日期' in df.columns:
                 date_col = '日期'
-            
+
             if date_col:
                 df['date'] = pd.to_datetime(df[date_col])
                 df = df.set_index('date').sort_index()
             else:
                 logger.warning(f"{symbol}: 找不到日期列")
                 return False
-            
-            # 如果有交易日历，对齐到日历
-            if self.calendar is not None:
-                # 创建一个与日历对齐的空 DataFrame
-                aligned_df = pd.DataFrame(index=self.calendar)
-                
-                # 将股票数据合并到对齐的 DataFrame
-                for col in df.columns:
-                    aligned_df[col] = df[col]
-                
-                df = aligned_df
-            
-            # 创建目标目录
+
             target_dir = self.bin_dir / symbol
             target_dir.mkdir(parents=True, exist_ok=True)
-            
-            # 转换并保存各字段
-            fields = ['open', 'high', 'low', 'close', 'volume', 'change', 'factor']
-            
-            for field in fields:
-                if field not in df.columns:
-                    continue
-                
-                bin_file = target_dir / f"{field}.day.bin"
-                
-                # 获取数据（保留 NaN）
-                data = df[field].values.astype(np.float32)
-                
-                if append and bin_file.exists():
-                    # 追加模式
-                    with open(bin_file, 'ab') as f:
-                        f.write(data.tobytes())
-                else:
-                    # 覆盖模式
+
+            fields = ['open', 'high', 'low', 'close', 'volume', 'amount', 'vwap', 'change', 'factor']
+
+            if self.calendar is not None:
+                cal_index = {d: i for i, d in enumerate(self.calendar)}
+                stock_dates = df.index
+                mapped_indices = []
+                for d in stock_dates:
+                    if d in cal_index:
+                        mapped_indices.append(cal_index[d])
+
+                if not mapped_indices:
+                    logger.warning(f"{symbol}: 无法映射到日历")
+                    return False
+
+                start_idx = min(mapped_indices)
+                end_idx = max(mapped_indices)
+                length = end_idx - start_idx + 1
+
+                for field in fields:
+                    if field not in df.columns:
+                        continue
+
+                    bin_file = target_dir / f"{field}.day.bin"
+                    aligned = np.full(length, np.nan, dtype=np.float32)
+                    for d, val in zip(stock_dates, df[field].values):
+                        if d in cal_index:
+                            aligned[cal_index[d] - start_idx] = val
+
+                    header = np.array([start_idx], dtype=np.float32)
                     with open(bin_file, 'wb') as f:
+                        f.write(header.tobytes())
+                        f.write(aligned.tobytes())
+
+                valid_count = df['close'].notna().sum() if 'close' in df.columns else len(df)
+                logger.info(f"✓ {symbol}: 转换完成 ({valid_count} 条有效, 日历[{start_idx}~{end_idx}])")
+            else:
+                start_idx = 0
+                for field in fields:
+                    if field not in df.columns:
+                        continue
+                    bin_file = target_dir / f"{field}.day.bin"
+                    data = df[field].values.astype(np.float32)
+                    header = np.array([start_idx], dtype=np.float32)
+                    with open(bin_file, 'wb') as f:
+                        f.write(header.tobytes())
                         f.write(data.tobytes())
-            
-            # 统计有效数据数量
-            valid_count = df['close'].notna().sum() if 'close' in df.columns else len(df)
-            logger.info(f"✓ {symbol}: 转换完成 ({valid_count} 条有效记录 / {len(df)} 总长度)")
+
+                valid_count = len(df)
+                logger.info(f"✓ {symbol}: 转换完成 ({valid_count} 条)")
+
             return True
-            
+
         except Exception as e:
             logger.error(f"转换 {symbol} 失败: {e}")
             return False

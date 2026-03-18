@@ -34,6 +34,9 @@ mlruns/
 # Results (generated)
 results/
 
+# Factor cache (generated)
+cache/
+
 # OS
 .DS_Store
 Thumbs.db
