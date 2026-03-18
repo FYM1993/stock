@@ -199,6 +199,10 @@ def main():
     output.print_comparison(all_results, test_start, test_end)
 
     if best_pred is not None:
+        print(f"\n  RankIC 监控 (预测与未来收益相关性):")
+        output.print_rank_ic(best_pred, test_start, test_end, name=best_name)
+
+    if best_pred is not None:
         print(f"\n{'='*70}")
         print(f"最优方案交易明细: {best_name}")
         print(f"{'='*70}")

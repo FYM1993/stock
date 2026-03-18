@@ -1,6 +1,6 @@
 """
 交易模块 — 交易模拟与收益计算
-单一职责: 模拟 TopkDropout 交易、计算每笔收益
+含涨跌停校验、交易成本
 """
 import pandas as pd
 import numpy as np
@@ -8,6 +8,35 @@ from qlib.data import D
 
 import config
 import strategy
+
+OPEN_COST = 0.0010
+CLOSE_COST = 0.0020
+LIMIT_THRESHOLD = 0.095
+
+
+def _build_limit_mask(all_stocks: list, test_start: str, test_end: str) -> dict:
+    """构建 (date, stock) -> (is_limit_up, is_limit_down)"""
+    limit_dict = {}
+    if not all_stocks:
+        return limit_dict
+    try:
+        data = D.features(
+            all_stocks,
+            ["$close/Ref($close,1)-1"],
+            start_time=test_start,
+            end_time=test_end,
+            freq="day",
+        )
+        data.columns = ["ret"]
+        for idx, row in data.iterrows():
+            inst = idx[0] if idx[0] in all_stocks else idx[1]
+            dt = idx[1] if idx[0] in all_stocks else idx[0]
+            if isinstance(dt, pd.Timestamp):
+                ret = float(row["ret"]) if pd.notna(row["ret"]) else 0
+                limit_dict[(dt, inst)] = (ret > LIMIT_THRESHOLD, ret < -LIMIT_THRESHOLD)
+    except Exception:
+        pass
+    return limit_dict
 
 
 def simulate_trades(pred, test_start: str, topk: int = 10, n_drop: int = 2) -> tuple:
@@ -126,8 +155,21 @@ def compute_trade_returns(
             print(f"  价格数据查询失败: {e}")
             return []
 
+    limit_mask = _build_limit_mask(all_stocks, test_start, test_end)
+
     def get_price(date, stock):
         return price_dict.get((date, stock), 0)
+
+    def get_exec_price(date, stock, is_buy: bool):
+        """涨跌停校验：涨停买不到用 close，跌停卖不出用 close（限价）"""
+        p = get_price(date, stock)
+        lim = limit_mask.get((date, stock), (False, False))
+        is_limit_up, is_limit_down = lim
+        if is_buy and is_limit_up:
+            return p  # 涨停买不到，用 close 表示无法成交；调用方会 skip
+        if not is_buy and is_limit_down:
+            return p  # 跌停卖不出，用 close（跌停价）保守估计
+        return p
 
     open_positions = {}
     completed = []
@@ -140,16 +182,18 @@ def compute_trade_returns(
             buy = open_positions.pop(stock)
             buy_exec = exec_date(buy["date"])
             sell_exec = exec_date(trade["date"])
-            bp = get_price(buy_exec, stock) or get_price(buy["date"], stock)
-            sp = get_price(sell_exec, stock) or get_price(trade["date"], stock)
+            bp = get_exec_price(buy_exec, stock, True) or get_exec_price(buy["date"], stock, True)
+            sp = get_exec_price(sell_exec, stock, False) or get_exec_price(trade["date"], stock, False)
             ret = sp / bp - 1 if bp > 0 else 0
+            # 交易成本：买入 0.1%，卖出 0.2%
+            ret_net = ret - OPEN_COST - CLOSE_COST
             completed.append({
                 "stock": stock,
                 "buy_date": buy_exec.strftime("%Y-%m-%d"),
                 "sell_date": sell_exec.strftime("%Y-%m-%d"),
                 "buy_price": round(bp, 2),
                 "sell_price": round(sp, 2),
-                "return": ret,
+                "return": ret_net,
                 "holding_days": (sell_exec - buy_exec).days,
             })
 
@@ -162,7 +206,7 @@ def compute_trade_returns(
         )
         if stock_prices:
             latest_date, lp = stock_prices[-1]
-            ret = lp / bp - 1 if bp > 0 else 0
+            ret = (lp / bp - 1 - OPEN_COST) if bp > 0 else 0  # 已付买入成本，未卖出
         else:
             latest_date, lp, ret = buy_exec, bp, 0
         completed.append({

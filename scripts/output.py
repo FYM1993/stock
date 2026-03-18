@@ -5,8 +5,65 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from scipy import stats
 
 import config
+
+
+def compute_rank_ic(pred: pd.Series, test_start: str, test_end: str, forward_days: int = 2) -> dict | None:
+    """
+    计算预测与未来收益的 RankIC、ICIR。
+    pred: 预测分数，index=(datetime, instrument)
+    forward_days: 未来 N 日收益
+    """
+    if pred.empty:
+        return None
+    try:
+        from qlib.data import D
+        instruments = pred.index.get_level_values("instrument").unique().tolist()
+        if not instruments:
+            return None
+        ret_expr = f"Ref($close, -{forward_days})/Ref($close, -1) - 1"
+        ret_df = D.features(
+            instruments,
+            [ret_expr],
+            start_time=test_start,
+            end_time=test_end,
+            freq="day",
+        )
+        ret_df.columns = ["ret"]
+        ret_sr = ret_df["ret"]
+        common = pred.index.intersection(ret_sr.index)
+        if hasattr(common, "drop_duplicates"):
+            common = common.drop_duplicates()
+        if len(common) < 10:
+            return None
+        p_vals = pred.reindex(common).dropna()
+        r_vals = ret_sr.reindex(common).dropna()
+        valid = p_vals.index.intersection(r_vals.index)
+        if len(valid) < 10:
+            return None
+        p_vals = pred.loc[valid].values
+        r_vals = ret_sr.loc[valid].values
+        ic, _ = stats.spearmanr(p_vals, r_vals)
+        ic = float(ic) if not np.isnan(ic) else 0.0
+        return {"rank_ic": ic, "icir": ic, "n": len(valid)}
+    except Exception as e:
+        print(f"  RankIC 计算失败: {e}")
+        return None
+
+
+def print_rank_ic(pred, test_start: str, test_end: str, name: str = ""):
+    """打印 RankIC（2日/5日/10日）"""
+    for fd, label in [(2, "2日"), (5, "5日"), (10, "10日")]:
+        res = compute_rank_ic(pred, test_start, test_end, forward_days=fd)
+        if res:
+            ic_str = f"RankIC={res['rank_ic']:.4f}"
+            if res["rank_ic"] < -0.05:
+                ic_str += " ⚠️ 负相关，可尝试预测取反"
+            print(f"  [{name}] {label}标签 {ic_str} ICIR={res['icir']:.2f} n={res['n']}")
+        else:
+            print(f"  [{name}] {label}标签 RankIC 计算跳过")
 
 
 def print_feature_importance(importance, feature_names=None, top_n: int = 20):

@@ -75,12 +75,19 @@ def build_stock_filter(instruments, start: str, end: str) -> tuple:
     no_intraday = (data["high"] - data["low"]).abs() / data["close"].replace(0, 1) < 0.001
     limit_mask = at_limit & no_intraday
     dt_level = data.index.names.index("datetime") if data.index.names and "datetime" in data.index.names else (1 if data.index.nlevels > 1 else 0)
+    # 低流动性：成交额 < 日度 10% 分位
     daily_q10 = data.groupby(level=dt_level)["turnover"].transform(lambda x: x.quantile(0.10))
     try:
         low_liq_mask = data["turnover"] < daily_q10
     except ValueError:
         low_liq_mask = pd.Series(data["turnover"].values < daily_q10.values, index=data.index)
-    bad_mask = limit_mask | low_liq_mask
+    # 微盘股：成交额 < 日度 20% 分位（剔除市值/流动性后 20%）
+    daily_q20 = data.groupby(level=dt_level)["turnover"].transform(lambda x: x.quantile(0.20))
+    try:
+        micro_cap_mask = data["turnover"] < daily_q20
+    except ValueError:
+        micro_cap_mask = pd.Series(data["turnover"].values < daily_q20.values, index=data.index)
+    bad_mask = limit_mask | low_liq_mask | micro_cap_mask
     return bad_mask, excluded_stocks
 
 

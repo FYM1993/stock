@@ -171,9 +171,13 @@ def _run_backtest_with_predicted_vwap(
         except Exception:
             pass
 
+    # 涨跌停掩码：(date, stock) -> (limit_up, limit_down)
+    limit_mask = tr._build_limit_mask(all_stocks, test_start, test_end) if all_stocks else {}
+
     positions = {}
     daily_values = []
     prev_value = account
+    cumulative_cost = 0.0
 
     for i, date in enumerate(cal):
         date_str = date.strftime("%Y-%m-%d")
@@ -190,19 +194,25 @@ def _run_backtest_with_predicted_vwap(
             price = price_dict.get((date, stock), 0)
             if price <= 0:
                 continue
+            lim = limit_mask.get((date, stock), (False, False))
+            if action == "BUY" and lim[0]:
+                continue  # 涨停买不到，跳过
+            # 跌停卖不出：仍执行（compute_trade_returns 用 close 保守估计），避免持仓与交易明细不一致
             min_cost = trade_unit * price
             cap_per_stock = account / topk
             if action == "BUY":
-                # 资金约束：买不起 100 股则跳过，模拟小资金实盘
                 if min_cost > cap_per_stock:
                     continue
             shares = max(trade_unit, int((account / topk / price) // trade_unit) * trade_unit)
+            trade_value = shares * price
             if action == "BUY":
                 positions[stock] = {"shares": shares, "cost": price}
+                cumulative_cost += trade_value * tr.OPEN_COST
             else:
                 positions.pop(stock, None)
+                cumulative_cost += trade_value * tr.CLOSE_COST
 
-        # 当日市值：持仓 * close；若尚未建仓（交易 T+1 执行），保持现金
+        # 当日市值：持仓 * close - 累计交易成本
         value = 0
         for stock in port:
             if stock in positions:
@@ -214,6 +224,7 @@ def _run_backtest_with_predicted_vwap(
                     except Exception:
                         p = positions[stock]["cost"]
                 value += positions[stock]["shares"] * p
+        value -= cumulative_cost
 
         # 首日或尚未执行任何交易时，positions 为空，value=0 会错误导致 -100% 收益
         if value == 0 and prev_value > 0:
