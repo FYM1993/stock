@@ -19,32 +19,40 @@ market: "csi1000"
 #   - SH000300: 沪深300指数
 #   - SH000905: 中证500指数
 #   - SH000852: 中证1000指数
-benchmark: "SH000300"
+benchmark: "SH000852"
 
 # ==================== 模型配置 ====================
 model:
-  class: "LGBModel"                    # LightGBM模型
-  module_path: "qlib.contrib.model.gbdt"
+  class: "DEnsembleModel"                    # 双重集成模型（更强大）
+  module_path: "qlib.contrib.model.double_ensemble"
   kwargs:
-    loss: "mse"                        # 损失函数：均方误差
+    # 集成模型参数
+    base_model: "gbm"        # 底层模型：梯度提升机
+    epochs: 100              # 训练轮数
+    num_models: 5            # 训练数据分成5份（集成5个子模型）
+    enable_sr: true          # 开启样本重加权
+    enable_fs: true          # 开启特征选择
+    decay: 0.9               # 样本重加权的衰减因子（必需参数）
     
+    loss: "mse"                        # 损失函数：均方误差
     # 树结构参数
-    max_depth: 8                       # 树的最大深度，控制模型复杂度（典型值：3-10）
-    num_leaves: 210                    # 叶子节点数，越大模型越复杂（典型值：31-255）
+    max_depth: 6                       # 树的最大深度
+    num_leaves: 63                     # 叶子节点数
     
     # 学习参数
-    learning_rate: 0.2                 # 学习率，控制每棵树的贡献（典型值：0.01-0.3）
+    learning_rate: 0.05                # 学习率
+    num_estimators: 500                # 树的数量
     
     # 采样参数（防止过拟合）
-    subsample: 0.8789                  # 样本采样比例，每棵树使用87.89%的样本
-    colsample_bytree: 0.8879           # 特征采样比例，每棵树使用88.79%的特征
+    subsample: 0.8789                  # 样本采样比例
+    colsample_bytree: 0.8879           # 特征采样比例
     
     # 正则化参数（防止过拟合）
-    lambda_l1: 205.6999                # L1正则化系数（Lasso），使模型稀疏
-    lambda_l2: 580.9768                # L2正则化系数（Ridge），防止权重过大
+    lambda_l1: 10                      # L1正则化系数
+    lambda_l2: 10                      # L2正则化系数
     
     # 性能参数
-    num_threads: 20                    # 并行线程数，根据CPU核心数调整
+    num_threads: 20                    # 并行线程数
 
 # ==================== 数据集配置 ====================
 dataset:
@@ -55,20 +63,21 @@ dataset:
       class: "Alpha158"                # Alpha158因子集（158个量价技术指标）
       module_path: "qlib.contrib.data.handler"
       kwargs:
+        label: ["Ref($close, -5)/Ref($close, -1) - 1"]  # 未来5日收益
         # ===== 时间范围说明 =====
         # start_time/end_time: 从Qlib加载数据的时间范围
         #   - 需要覆盖训练集、验证集、测试集的全部时间
         #   - 当前数据覆盖：2000-01-04 ~ 2026-03-19（26年完整历史）
         #   - 用途：决定从数据库读取哪些日期的原始行情数据
-        start_time: "2008-01-01"       # 从2008年开始（避免早期数据质量问题）
-        end_time: "2025-12-31"         # 到2025年底（2026年数据不完整）
+        start_time: "2008-01-01"       
+        end_time: "2026-03-19"         
         
         # fit_start_time/fit_end_time: 拟合数据预处理器的时间范围
         #   - 仅用于训练集！用来计算特征的统计量（均值、标准差等）
         #   - 例如：RobustZScoreNorm需要计算每个特征的均值和标准差
         #   - 重要：只能用训练集数据，否则会产生数据泄漏（look-ahead bias）
         #   - 通常设置为训练集的时间范围
-        fit_start_time: "2023-01-01"   # 训练集开始
+        fit_start_time: "2018-01-01"   # 训练集开始
         fit_end_time: "2024-12-31"     # 训练集结束
         
         instruments: "csi1000"          # 股票池（需与上面market保持一致）
@@ -94,7 +103,7 @@ dataset:
     
     # 数据集划分
     segments:
-      train: ["2023-01-01", "2024-12-31"]  # 训练集
+      train: ["2018-01-01", "2024-12-31"]  # 训练集
       valid: ["2025-01-01", "2025-12-31"]  # 验证集
       test:  ["2026-01-01", "2026-03-19"]  # 测试集
 
@@ -107,8 +116,8 @@ port_analysis_config:
     module_path: "qlib.contrib.strategy"
     kwargs:
       signal: "<PRED>"                 # 使用模型预测值作为信号
-      topk: 10                         # 持仓数量
-      n_drop: 2                        # 每次调仓最多卖出x只
+      topk: 30                         # 持仓数量
+      n_drop: 1                        # 每次调仓最多卖出x只
   
   # 回测引擎配置
   backtest:
@@ -128,6 +137,6 @@ port_analysis_config:
       deal_price: "close"              # 使用收盘价成交（也可选择"open", "vwap"等）
       
       # 交易成本
-      open_cost: 0.0005                # 开仓手续费率：0.05%（券商佣金，一般为万分之5）
-      close_cost: 0.0015               # 平仓手续费率：0.15%（佣金0.05% + 印花税0.1%）
+      open_cost: 0.0003                # 开仓手续费率：0.05%（券商佣金，一般为万分之5）
+      close_cost: 0.0013               # 平仓手续费率：0.15%（佣金0.05% + 印花税0.1%）
       min_cost: 5                      # 最小手续费：5元/笔（小额交易的最低收费）
