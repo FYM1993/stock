@@ -1,0 +1,133 @@
+# A股量化策略配置文件示例
+# ============================
+
+# Qlib初始化配置
+qlib_init:
+  provider_uri: "~/GolandProjects/stock/qlib_data/cn_data"
+  region: "cn"
+
+# ==================== 股票池和基准配置 ====================
+# market: 股票池选择
+#   - csi300: 沪深300（大盘蓝筹股，市值最大的300只）
+#   - csi500: 中证500（中盘股，排名301-800）
+#   - csi800: 中证800（沪深300+中证500）
+#   - csi1000: 中证1000（小盘股）
+#   - all: 全市场所有股票
+market: "csi1000"
+
+# benchmark: 基准指数，用于计算超额收益
+#   - SH000300: 沪深300指数
+#   - SH000905: 中证500指数
+#   - SH000852: 中证1000指数
+benchmark: "SH000300"
+
+# ==================== 模型配置 ====================
+model:
+  class: "LGBModel"                    # LightGBM模型
+  module_path: "qlib.contrib.model.gbdt"
+  kwargs:
+    loss: "mse"                        # 损失函数：均方误差
+    
+    # 树结构参数
+    max_depth: 8                       # 树的最大深度，控制模型复杂度（典型值：3-10）
+    num_leaves: 210                    # 叶子节点数，越大模型越复杂（典型值：31-255）
+    
+    # 学习参数
+    learning_rate: 0.2                 # 学习率，控制每棵树的贡献（典型值：0.01-0.3）
+    
+    # 采样参数（防止过拟合）
+    subsample: 0.8789                  # 样本采样比例，每棵树使用87.89%的样本
+    colsample_bytree: 0.8879           # 特征采样比例，每棵树使用88.79%的特征
+    
+    # 正则化参数（防止过拟合）
+    lambda_l1: 205.6999                # L1正则化系数（Lasso），使模型稀疏
+    lambda_l2: 580.9768                # L2正则化系数（Ridge），防止权重过大
+    
+    # 性能参数
+    num_threads: 20                    # 并行线程数，根据CPU核心数调整
+
+# ==================== 数据集配置 ====================
+dataset:
+  class: "DatasetH"                    # Qlib标准数据集类
+  module_path: "qlib.data.dataset"
+  kwargs:
+    handler:
+      class: "Alpha158"                # Alpha158因子集（158个量价技术指标）
+      module_path: "qlib.contrib.data.handler"
+      kwargs:
+        # ===== 时间范围说明 =====
+        # start_time/end_time: 从Qlib加载数据的时间范围
+        #   - 需要覆盖训练集、验证集、测试集的全部时间
+        #   - 当前数据覆盖：2000-01-04 ~ 2026-03-19（26年完整历史）
+        #   - 用途：决定从数据库读取哪些日期的原始行情数据
+        start_time: "2008-01-01"       # 从2008年开始（避免早期数据质量问题）
+        end_time: "2025-12-31"         # 到2025年底（2026年数据不完整）
+        
+        # fit_start_time/fit_end_time: 拟合数据预处理器的时间范围
+        #   - 仅用于训练集！用来计算特征的统计量（均值、标准差等）
+        #   - 例如：RobustZScoreNorm需要计算每个特征的均值和标准差
+        #   - 重要：只能用训练集数据，否则会产生数据泄漏（look-ahead bias）
+        #   - 通常设置为训练集的时间范围
+        fit_start_time: "2023-01-01"   # 训练集开始
+        fit_end_time: "2024-12-31"     # 训练集结束
+        
+        instruments: "csi1000"          # 股票池（需与上面market保持一致）
+        
+        # 推理时的数据处理（用于预测）
+        infer_processors:
+          - class: "RobustZScoreNorm"  # 特征标准化（Z-score归一化）
+            kwargs:
+              fields_group: "feature"  # 只处理特征列
+              clip_outlier: true       # 裁剪异常值（通常在±3倍标准差之外）
+          
+          - class: "Fillna"            # 填充缺失值
+            kwargs:
+              fields_group: "feature"  # 只处理特征列（用前值填充或0）
+        
+        # 训练时的数据处理
+        learn_processors:
+          - class: "DropnaLabel"       # 删除标签(Label)为空的样本
+          
+          - class: "CSRankNorm"        # 截面排序归一化
+            kwargs:                    # 每天对所有股票的标签排序，转为[-1, 1]区间
+              fields_group: "label"    # 只处理标签列
+    
+    # 数据集划分
+    segments:
+      train: ["2023-01-01", "2024-12-31"]  # 训练集
+      valid: ["2025-01-01", "2025-12-31"]  # 验证集
+      test:  ["2026-01-01", "2026-03-19"]  # 测试集
+
+# ==================== 回测配置 ====================
+port_analysis_config:
+  
+  # 交易策略配置
+  strategy:
+    class: "TopkDropoutStrategy"       # TopK策略：选择预测收益最高的K只股票
+    module_path: "qlib.contrib.strategy"
+    kwargs:
+      signal: "<PRED>"                 # 使用模型预测值作为信号
+      topk: 10                         # 持仓数量
+      n_drop: 2                        # 每次调仓最多卖出x只
+  
+  # 回测引擎配置
+  backtest:
+    start_time: "2026-01-01"           # 回测开始日期
+    end_time: "2026-03-19"             # 回测结束日期
+    account: 100000                    # 初始资金：10万元
+    benchmark: "SH000300"              # 基准指数（用于计算超额收益）
+    
+    # 交易所配置
+    exchange_kwargs:
+      freq: "day"                      # 交易频率：日频（每日调仓）
+      
+      # 涨跌停限制
+      limit_threshold: 0.095           # 涨跌停阈值：9.5%（A股涨跌停限制为10%，留0.5%缓冲）
+      
+      # 成交价格
+      deal_price: "close"              # 使用收盘价成交（也可选择"open", "vwap"等）
+      
+      # 交易成本
+      open_cost: 0.0005                # 开仓手续费率：0.05%（券商佣金，一般为万分之5）
+      close_cost: 0.0015               # 平仓手续费率：0.15%（佣金0.05% + 印花税0.1%）
+      min_cost: 5                      # 最小手续费：5元/笔（小额交易的最低收费）
