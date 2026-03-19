@@ -6,18 +6,14 @@
 每天运行一次，输出当天的买卖信号。
 基于已训练好的模型，对当前股票池生成预测排名。
 
+调仓间隔从 config.yaml 的 port_analysis_config.strategy.kwargs.hold_days 读取。
+
 使用方式：
     # 首次：需要先训练模型并保存
     python scripts/daily_signal.py --train
 
-    # 每日运行（直接加载已训练模型，生成今日信号）
+    # 每日运行（自动读取 config.yaml 中的调仓间隔）
     python scripts/daily_signal.py
-
-    # 指定配置文件
-    python scripts/daily_signal.py --config config.yaml
-
-    # 指定持仓文件（跟踪当前持仓）
-    python scripts/daily_signal.py --portfolio portfolio.json
 """
 
 import sys
@@ -295,14 +291,14 @@ def main():
     parser.add_argument("--config", default=CONFIG_PATH, help="配置文件路径")
     parser.add_argument("--portfolio", default=PORTFOLIO_FILE, help="持仓文件路径")
     parser.add_argument("--train", action="store_true", help="重新训练模型")
-    parser.add_argument("--top", type=int, default=None, help="只显示前N只股票")
     parser.add_argument("--output", default=None, help="输出信号到文件")
-    parser.add_argument("--hold-days", type=int, default=5,
-                        help="调仓间隔（交易日），只有每N天才生成信号。设为1表示每天调仓")
     args = parser.parse_args()
 
     # 加载配置
     config = load_config(args.config)
+
+    # 从配置读取调仓间隔
+    hold_days = config.get("port_analysis_config", {}).get("strategy", {}).get("kwargs", {}).get("hold_days", 1)
 
     # 是否需要训练
     if args.train:
@@ -315,7 +311,7 @@ def main():
     portfolio = load_portfolio(args.portfolio)
 
     # 检查是否是调仓日
-    if args.hold_days > 1:
+    if hold_days > 1:
         last_rebalance = portfolio.get("last_rebalance", "")
         today = get_today_str()
 
@@ -329,8 +325,8 @@ def main():
             # A股一年约244个交易日，365自然日，比例≈0.67
             trading_days_est = int(elapsed_days * 0.67)
 
-            if trading_days_est < args.hold_days and elapsed_days > 0:
-                remaining = args.hold_days - trading_days_est
+            if trading_days_est < hold_days and elapsed_days > 0:
+                remaining = hold_days - trading_days_est
                 print(f"⏸️  今天不是调仓日")
                 print(f"   上次调仓: {last_rebalance}")
                 print(f"   已过约 {trading_days_est} 个交易日（自然日 {elapsed_days} 天）")
@@ -370,7 +366,7 @@ def main():
 
     # 询问是否更新持仓
     print(f"\n💾 持仓文件: {args.portfolio}")
-    print(f"   调仓间隔: 每 {args.hold_days} 个交易日")
+    print(f"   调仓间隔: 每 {hold_days} 个交易日")
     print(f"   执行完交易后，更新 portfolio.json 并记录 last_rebalance 日期")
 
     # 自动记录调仓日期到 portfolio
