@@ -28,8 +28,6 @@ data/*.txt
 logs/
 *.log
 
-# MLflow
-mlruns/
 
 # Results (generated)
 results/
