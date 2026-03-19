@@ -1,0 +1,31 @@
+diff --git a/config.yaml b/config.yaml
+index 244a38f..2f40039 100644
+--- a/config.yaml
++++ b/config.yaml
+@@ -104,20 +104,21 @@ dataset:
+     # 数据集划分
+     segments:
+       train: ["2018-01-01", "2024-12-31"]  # 训练集
+-      valid: ["2025-01-01", "2025-12-31"]  # 验证集
+-      test:  ["2026-01-01", "2026-03-19"]  # 测试集
++      valid: ["2024-01-01", "2024-12-31"]  # 验证集
++      test:  ["2025-01-01", "2025-12-31"]  # 至少1年
+ 
+ # ==================== 回测配置 ====================
+ port_analysis_config:
+   
+   # 交易策略配置
+   strategy:
+-    class: "TopkDropoutStrategy"       # TopK策略：选择预测收益最高的K只股票
+-    module_path: "qlib.contrib.strategy"
++    class: "scripts.periodic_topk_strategy.PeriodicTopkStrategy"       # TopK策略：选择预测收益最高的K只股票
++    module_path: "scripts.periodic_topk_strategy"
+     kwargs:
+       signal: "<PRED>"                 # 使用模型预测值作为信号
+       topk: 30                         # 持仓数量
+-      n_drop: 1                        # 每次调仓最多卖出x只
++      n_drop: 5              # 每次调仓最多换5只（5天不动了，放宽到5）
++      hold_days: 5           # ★ 每5个交易日调仓一次，对齐5日标签
+   
+   # 回测引擎配置
+   backtest:
