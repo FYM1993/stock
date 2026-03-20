@@ -32,9 +32,14 @@ logs/
 # Results (generated)
 results/
 
+# Reports (daily generated)
+reports/
+
 # Factor cache (generated)
 cache/
 
 # OS
 .DS_Store
 Thumbs.db
+
+mlruns/

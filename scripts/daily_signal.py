@@ -32,6 +32,7 @@ from qlib.utils import init_instance_by_config
 # ============ 配置 ============
 CONFIG_PATH = "config.yaml"
 PORTFOLIO_FILE = "portfolio.json"
+REPORTS_DIR = Path("reports")  # 报告目录
 
 
 def load_config(config_path=CONFIG_PATH):
@@ -200,6 +201,86 @@ def generate_trade_plan(config, top_stocks, bottom_stocks, portfolio):
 
 
 # ================================================================
+#  生成并保存 Markdown 报告
+# ================================================================
+def generate_markdown_report(top_stocks, bottom_stocks, trade_plan, save_path):
+    """生成 Markdown 格式的交易信号报告"""
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    md_content = f"""# 交易信号报告 — {today}
+
+生成时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+---
+
+## 🟢 买入候选 (Top {len(top_stocks)})
+
+| 排名 | 股票代码 | 预测分数 |
+|------|----------|----------|
+"""
+    
+    for code, score, rank in top_stocks:
+        md_content += f"| {rank} | {code} | {score:.6f} |\n"
+    
+    md_content += f"""
+---
+
+## 🔴 卖出候选 (Bottom {len(bottom_stocks)})
+
+| 股票代码 | 预测分数 |
+|----------|----------|
+"""
+    
+    for code, score, _ in bottom_stocks:
+        md_content += f"| {code} | {score:.6f} |\n"
+    
+    md_content += f"""
+---
+
+## 📝 交易计划
+
+- **总资金**: ¥{trade_plan['total_capital']:,.0f}
+- **当前持仓**: {trade_plan['current_holdings']} 只
+- **目标持仓**: {trade_plan['target']} 只
+
+"""
+    
+    if trade_plan["sells"]:
+        md_content += "### ⬇️ 卖出\n\n"
+        for s in trade_plan["sells"]:
+            md_content += f"- **{s['code']}** - {s['reason']}\n"
+        md_content += "\n"
+    
+    if trade_plan["buys"]:
+        md_content += "### ⬆️ 买入\n\n"
+        md_content += "| 排名 | 股票代码 | 建议金额 |\n"
+        md_content += "|------|----------|----------|\n"
+        for b in trade_plan["buys"]:
+            md_content += f"| {b['rank']} | {b['code']} | ¥{b['suggest_amount']:,.0f} |\n"
+    
+    if not trade_plan["sells"] and not trade_plan["buys"]:
+        md_content += "### ✅ 无需调仓\n\n当前持仓已达最优配置。\n"
+    
+    md_content += """
+---
+
+## 📊 统计信息
+
+"""
+    md_content += f"- 买入候选总数: {len(top_stocks)}\n"
+    md_content += f"- 卖出候选总数: {len(bottom_stocks)}\n"
+    md_content += f"- 实际买入操作: {len(trade_plan['buys'])}\n"
+    md_content += f"- 实际卖出操作: {len(trade_plan['sells'])}\n"
+    
+    # 保存到文件
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(save_path, "w", encoding="utf-8") as f:
+        f.write(md_content)
+    
+    return md_content
+
+
+# ================================================================
 #  输出报告
 # ================================================================
 def print_report(top_stocks, bottom_stocks, trade_plan):
@@ -243,11 +324,10 @@ def print_report(top_stocks, bottom_stocks, trade_plan):
 # ================================================================
 def main():
     parser = argparse.ArgumentParser(description="每日交易信号（纯推理，不训练）")
-    parser.add_argument("--config", default=CONFIG_PATH)
+    parser.add_argument("--config", default=CONFIG_PATH,
+                        help="配置文件路径")
     parser.add_argument("--experiment", default=None,
                         help="指定实验名（默认取最近一次训练）")
-    parser.add_argument("--output", default=None,
-                        help="输出信号到 JSON 文件")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -310,19 +390,14 @@ def main():
     portfolio = load_portfolio()
     trade_plan = generate_trade_plan(config, top_stocks, bottom_stocks, portfolio)
 
-    # ---- 输出 ----
+    # ---- 输出到终端 ----
     print_report(top_stocks, bottom_stocks, trade_plan)
 
-    # 保存到文件
-    if args.output:
-        result = {
-            "top_stocks": top_stocks,
-            "bottom_stocks": bottom_stocks,
-            "trade_plan": trade_plan,
-        }
-        with open(args.output, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
-        print(f"\n💾 信号已保存到: {args.output}")
+    # ---- 自动保存 Markdown 报告 ----
+    today = datetime.now().strftime("%Y-%m-%d")
+    report_path = REPORTS_DIR / f"{today}.md"
+    generate_markdown_report(top_stocks, bottom_stocks, trade_plan, report_path)
+    print(f"\n📄 报告已保存: {report_path}")
 
 
 if __name__ == "__main__":
