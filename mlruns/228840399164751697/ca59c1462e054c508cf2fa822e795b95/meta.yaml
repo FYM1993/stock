@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/yimin.fu/GolandProjects/stock/mlruns/228840399164751697/ca59c1462e054c508cf2fa822e795b95/artifacts
+end_time: 1774014518143
+entry_point_name: ''
+experiment_id: '228840399164751697'
+lifecycle_stage: active
+run_id: ca59c1462e054c508cf2fa822e795b95
+run_name: mlflow_recorder
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774013753371
+status: 3
+tags: []
+user_id: yimin.fu

@@ -1,0 +1,3275 @@
+diff --git a/config.yaml b/config.yaml
+index e338635..bb65170 100644
+--- a/config.yaml
++++ b/config.yaml
+@@ -14,7 +14,7 @@ qlib_init:
+ #   - csi1000: 中证1000（小盘股）
+ #   - all: 全市场所有股票
+ #   - all_except_688_BJ: 全市场所有股票，不包括科创板和北交所
+-market: "all_except_688_BJ"
++market: "csi300"
+ 
+ # benchmark: 基准指数，用于计算超额收益
+ #   - SH000300: 沪深300指数
+@@ -78,10 +78,10 @@ dataset:
+         #   - 例如：RobustZScoreNorm需要计算每个特征的均值和标准差
+         #   - 重要：只能用训练集数据，否则会产生数据泄漏（look-ahead bias）
+         #   - 通常设置为训练集的时间范围
+-        fit_start_time: "2018-01-01"   # 训练集开始
++        fit_start_time: "2015-01-01"   # 训练集开始
+         fit_end_time: "2023-12-31"     # 训练集结束
+         
+-        instruments: "all_except_688_BJ"          # 股票池（需与上面market保持一致）
++        instruments: "csi300"          # 股票池（需与上面market保持一致）
+         
+         # 推理时的数据处理（用于预测）
+         infer_processors:
+@@ -104,7 +104,7 @@ dataset:
+     
+     # 数据集划分
+     segments:
+-      train: ["2018-01-01", "2023-12-31"]  # 训练集
++      train: ["2015-01-01", "2023-12-31"]  # 训练集
+       valid: ["2024-01-01", "2024-12-31"]  # 验证集
+       test:  ["2025-01-01", "2026-03-19"]  # 至少1年
+ 
+diff --git a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_cached.txt b/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_cached.txt
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_diff.txt b/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_diff.txt
+deleted file mode 100644
+index a3e18cb..0000000
+--- a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_diff.txt
++++ /dev/null
+@@ -1,1161 +0,0 @@
+-diff --git a/config.yaml b/config.yaml
+-index 2f40039..e338635 100644
+---- a/config.yaml
+-+++ b/config.yaml
+-@@ -13,13 +13,14 @@ qlib_init:
+- #   - csi800: 中证800（沪深300+中证500）
+- #   - csi1000: 中证1000（小盘股）
+- #   - all: 全市场所有股票
+--market: "csi1000"
+-+#   - all_except_688_BJ: 全市场所有股票，不包括科创板和北交所
+-+market: "all_except_688_BJ"
+- 
+- # benchmark: 基准指数，用于计算超额收益
+- #   - SH000300: 沪深300指数
+- #   - SH000905: 中证500指数
+- #   - SH000852: 中证1000指数
+--benchmark: "SH000852"
+-+benchmark: "SH000300"
+- 
+- # ==================== 模型配置 ====================
+- model:
+-@@ -28,7 +29,7 @@ model:
+-   kwargs:
+-     # 集成模型参数
+-     base_model: "gbm"        # 底层模型：梯度提升机
+--    epochs: 100              # 训练轮数
+-+    epochs: 50              # 训练轮数
+-     num_models: 5            # 训练数据分成5份（集成5个子模型）
+-     enable_sr: true          # 开启样本重加权
+-     enable_fs: true          # 开启特征选择
+-@@ -52,7 +53,7 @@ model:
+-     lambda_l2: 10                      # L2正则化系数
+-     
+-     # 性能参数
+--    num_threads: 20                    # 并行线程数
+-+    num_threads: 8                    # 并行线程数
+- 
+- # ==================== 数据集配置 ====================
+- dataset:
+-@@ -78,9 +79,9 @@ dataset:
+-         #   - 重要：只能用训练集数据，否则会产生数据泄漏（look-ahead bias）
+-         #   - 通常设置为训练集的时间范围
+-         fit_start_time: "2018-01-01"   # 训练集开始
+--        fit_end_time: "2024-12-31"     # 训练集结束
+-+        fit_end_time: "2023-12-31"     # 训练集结束
+-         
+--        instruments: "csi1000"          # 股票池（需与上面market保持一致）
+-+        instruments: "all_except_688_BJ"          # 股票池（需与上面market保持一致）
+-         
+-         # 推理时的数据处理（用于预测）
+-         infer_processors:
+-@@ -103,26 +104,26 @@ dataset:
+-     
+-     # 数据集划分
+-     segments:
+--      train: ["2018-01-01", "2024-12-31"]  # 训练集
+-+      train: ["2018-01-01", "2023-12-31"]  # 训练集
+-       valid: ["2024-01-01", "2024-12-31"]  # 验证集
+--      test:  ["2025-01-01", "2025-12-31"]  # 至少1年
+-+      test:  ["2025-01-01", "2026-03-19"]  # 至少1年
+- 
+- # ==================== 回测配置 ====================
+- port_analysis_config:
+-   
+-   # 交易策略配置
+-   strategy:
+--    class: "scripts.periodic_topk_strategy.PeriodicTopkStrategy"       # TopK策略：选择预测收益最高的K只股票
+--    module_path: "scripts.periodic_topk_strategy"
+-+    class: "PeriodicTopkStrategy"       # 周期调仓策略
+-+    module_path: "periodic_topk_strategy"
+-     kwargs:
+-       signal: "<PRED>"                 # 使用模型预测值作为信号
+-       topk: 30                         # 持仓数量
+--      n_drop: 5              # 每次调仓最多换5只（5天不动了，放宽到5）
+--      hold_days: 5           # ★ 每5个交易日调仓一次，对齐5日标签
+-+      n_drop: 5                        # 每次调仓最多换5只
+-+      hold_days: 5                     # ★ 每x个交易日调仓一次
+-   
+-   # 回测引擎配置
+-   backtest:
+--    start_time: "2026-01-01"           # 回测开始日期
+-+    start_time: "2025-01-01"           # 回测开始日期
+-     end_time: "2026-03-19"             # 回测结束日期
+-     account: 100000                    # 初始资金：10万元
+-     benchmark: "SH000300"              # 基准指数（用于计算超额收益）
+-@@ -135,7 +136,7 @@ port_analysis_config:
+-       limit_threshold: 0.095           # 涨跌停阈值：9.5%（A股涨跌停限制为10%，留0.5%缓冲）
+-       
+-       # 成交价格
+--      deal_price: "close"              # 使用收盘价成交（也可选择"open", "vwap"等）
+-+      deal_price: "open"              #"open", "vwap", "close"
+-       
+-       # 交易成本
+-       open_cost: 0.0003                # 开仓手续费率：0.05%（券商佣金，一般为万分之5）
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_cached.txt b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_cached.txt
+-deleted file mode 100644
+-index e69de29..0000000
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_diff.txt b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_diff.txt
+-deleted file mode 100644
+-index 0f63738..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_diff.txt
+-+++ /dev/null
+-@@ -1,111 +0,0 @@
+--diff --git a/config.yaml b/config.yaml
+--index 40a97bf..244a38f 100644
+----- a/config.yaml
+--+++ b/config.yaml
+--@@ -19,32 +19,40 @@ market: "csi1000"
+-- #   - SH000300: 沪深300指数
+-- #   - SH000905: 中证500指数
+-- #   - SH000852: 中证1000指数
+---benchmark: "SH000300"
+--+benchmark: "SH000852"
+-- 
+-- # ==================== 模型配置 ====================
+-- model:
+---  class: "LGBModel"                    # LightGBM模型
+---  module_path: "qlib.contrib.model.gbdt"
+--+  class: "DEnsembleModel"                    # 双重集成模型（更强大）
+--+  module_path: "qlib.contrib.model.double_ensemble"
+--   kwargs:
+---    loss: "mse"                        # 损失函数：均方误差
+--+    # 集成模型参数
+--+    base_model: "gbm"        # 底层模型：梯度提升机
+--+    epochs: 100              # 训练轮数
+--+    num_models: 5            # 训练数据分成5份（集成5个子模型）
+--+    enable_sr: true          # 开启样本重加权
+--+    enable_fs: true          # 开启特征选择
+--+    decay: 0.9               # 样本重加权的衰减因子（必需参数）
+--     
+--+    loss: "mse"                        # 损失函数：均方误差
+--     # 树结构参数
+---    max_depth: 8                       # 树的最大深度，控制模型复杂度（典型值：3-10）
+---    num_leaves: 210                    # 叶子节点数，越大模型越复杂（典型值：31-255）
+--+    max_depth: 6                       # 树的最大深度
+--+    num_leaves: 63                     # 叶子节点数
+--     
+--     # 学习参数
+---    learning_rate: 0.2                 # 学习率，控制每棵树的贡献（典型值：0.01-0.3）
+--+    learning_rate: 0.05                # 学习率
+--+    num_estimators: 500                # 树的数量
+--     
+--     # 采样参数（防止过拟合）
+---    subsample: 0.8789                  # 样本采样比例，每棵树使用87.89%的样本
+---    colsample_bytree: 0.8879           # 特征采样比例，每棵树使用88.79%的特征
+--+    subsample: 0.8789                  # 样本采样比例
+--+    colsample_bytree: 0.8879           # 特征采样比例
+--     
+--     # 正则化参数（防止过拟合）
+---    lambda_l1: 205.6999                # L1正则化系数（Lasso），使模型稀疏
+---    lambda_l2: 580.9768                # L2正则化系数（Ridge），防止权重过大
+--+    lambda_l1: 10                      # L1正则化系数
+--+    lambda_l2: 10                      # L2正则化系数
+--     
+--     # 性能参数
+---    num_threads: 20                    # 并行线程数，根据CPU核心数调整
+--+    num_threads: 20                    # 并行线程数
+-- 
+-- # ==================== 数据集配置 ====================
+-- dataset:
+--@@ -55,20 +63,21 @@ dataset:
+--       class: "Alpha158"                # Alpha158因子集（158个量价技术指标）
+--       module_path: "qlib.contrib.data.handler"
+--       kwargs:
+--+        label: ["Ref($close, -5)/Ref($close, -1) - 1"]  # 未来5日收益
+--         # ===== 时间范围说明 =====
+--         # start_time/end_time: 从Qlib加载数据的时间范围
+--         #   - 需要覆盖训练集、验证集、测试集的全部时间
+--         #   - 当前数据覆盖：2000-01-04 ~ 2026-03-19（26年完整历史）
+--         #   - 用途：决定从数据库读取哪些日期的原始行情数据
+---        start_time: "2008-01-01"       # 从2008年开始（避免早期数据质量问题）
+---        end_time: "2025-12-31"         # 到2025年底（2026年数据不完整）
+--+        start_time: "2008-01-01"       
+--+        end_time: "2026-03-19"         
+--         
+--         # fit_start_time/fit_end_time: 拟合数据预处理器的时间范围
+--         #   - 仅用于训练集！用来计算特征的统计量（均值、标准差等）
+--         #   - 例如：RobustZScoreNorm需要计算每个特征的均值和标准差
+--         #   - 重要：只能用训练集数据，否则会产生数据泄漏（look-ahead bias）
+--         #   - 通常设置为训练集的时间范围
+---        fit_start_time: "2023-01-01"   # 训练集开始
+--+        fit_start_time: "2018-01-01"   # 训练集开始
+--         fit_end_time: "2024-12-31"     # 训练集结束
+--         
+--         instruments: "csi1000"          # 股票池（需与上面market保持一致）
+--@@ -94,7 +103,7 @@ dataset:
+--     
+--     # 数据集划分
+--     segments:
+---      train: ["2023-01-01", "2024-12-31"]  # 训练集
+--+      train: ["2018-01-01", "2024-12-31"]  # 训练集
+--       valid: ["2025-01-01", "2025-12-31"]  # 验证集
+--       test:  ["2026-01-01", "2026-03-19"]  # 测试集
+-- 
+--@@ -107,8 +116,8 @@ port_analysis_config:
+--     module_path: "qlib.contrib.strategy"
+--     kwargs:
+--       signal: "<PRED>"                 # 使用模型预测值作为信号
+---      topk: 10                         # 持仓数量
+---      n_drop: 2                        # 每次调仓最多卖出x只
+--+      topk: 30                         # 持仓数量
+--+      n_drop: 1                        # 每次调仓最多卖出x只
+--   
+--   # 回测引擎配置
+--   backtest:
+--@@ -128,6 +137,6 @@ port_analysis_config:
+--       deal_price: "close"              # 使用收盘价成交（也可选择"open", "vwap"等）
+--       
+--       # 交易成本
+---      open_cost: 0.0005                # 开仓手续费率：0.05%（券商佣金，一般为万分之5）
+---      close_cost: 0.0015               # 平仓手续费率：0.15%（佣金0.05% + 印花税0.1%）
+--+      open_cost: 0.0003                # 开仓手续费率：0.05%（券商佣金，一般为万分之5）
+--+      close_cost: 0.0013               # 平仓手续费率：0.15%（佣金0.05% + 印花税0.1%）
+--       min_cost: 5                      # 最小手续费：5元/笔（小额交易的最低收费）
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_status.txt b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_status.txt
+-deleted file mode 100644
+-index 2f9c430..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_status.txt
+-+++ /dev/null
+-@@ -1,9 +0,0 @@
+--位于分支 main
+--您的分支与上游分支 'origin/main' 一致。
+--
+--尚未暂存以备提交的变更：
+--  （使用 "git add <文件>..." 更新要提交的内容）
+--  （使用 "git restore <文件>..." 丢弃工作区的改动）
+--	修改：     config.yaml
+--
+--修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/label.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/label.pkl
+-deleted file mode 100644
+-index 7f3d218..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/label.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicator_analysis_1day.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicator_analysis_1day.pkl
+-deleted file mode 100644
+-index d4ad03f..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicator_analysis_1day.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day.pkl
+-deleted file mode 100644
+-index 6ff55a9..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day_obj.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day_obj.pkl
+-deleted file mode 100644
+-index 155ee16..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day_obj.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/port_analysis_1day.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/port_analysis_1day.pkl
+-deleted file mode 100644
+-index 2b33700..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/port_analysis_1day.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/positions_normal_1day.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/positions_normal_1day.pkl
+-deleted file mode 100644
+-index 063f8bb..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/positions_normal_1day.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/report_normal_1day.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/report_normal_1day.pkl
+-deleted file mode 100644
+-index 38d562f..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/report_normal_1day.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/pred.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/pred.pkl
+-deleted file mode 100644
+-index ccc8f2e..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/pred.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/meta.yaml b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/meta.yaml
+-deleted file mode 100644
+-index f833754..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/meta.yaml
+-+++ /dev/null
+-@@ -1,14 +0,0 @@
+--artifact_uri: file:///Users/yimin.fu/GolandProjects/stock/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts
+--end_time: 1773928882607
+--entry_point_name: ''
+--experiment_id: '347281245549811582'
+--lifecycle_stage: active
+--run_id: 055cfb2c8006409181e629e5b19a205c
+--run_name: mlflow_recorder
+--source_name: ''
+--source_type: 4
+--source_version: ''
+--start_time: 1773926024661
+--status: 3
+--tags: []
+--user_id: yimin.fu
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.annualized_return b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.annualized_return
+-deleted file mode 100644
+-index 416f009..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.annualized_return
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882594 0.13460818939476807 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.information_ratio b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.information_ratio
+-deleted file mode 100644
+-index 3d5fd57..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.information_ratio
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882595 1.1445412778614108 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.max_drawdown b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.max_drawdown
+-deleted file mode 100644
+-index 5ec23d2..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.max_drawdown
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882597 -0.01730344290052093 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.mean b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.mean
+-deleted file mode 100644
+-index 4edefcb..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.mean
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882590 0.0005655806277091095 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.std b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.std
+-deleted file mode 100644
+-index 113ede5..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.std
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882592 0.007623449784994902 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.annualized_return b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.annualized_return
+-deleted file mode 100644
+-index e1406ab..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.annualized_return
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882576 0.1657232141802653 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.information_ratio b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.information_ratio
+-deleted file mode 100644
+-index 7c4349f..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.information_ratio
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882586 1.4200302769585862 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.max_drawdown b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.max_drawdown
+-deleted file mode 100644
+-index dc84602..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.max_drawdown
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882588 -0.016565576328340277 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.mean b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.mean
+-deleted file mode 100644
+-index d1ec672..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.mean
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882563 0.0006963160259675014 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.std b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.std
+-deleted file mode 100644
+-index 1b44ad0..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.std
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882574 0.0075647967690349255 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.ffr b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.ffr
+-deleted file mode 100644
+-index 3b220d4..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.ffr
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882599 1.0 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pa b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pa
+-deleted file mode 100644
+-index a4b0b80..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pa
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882600 0.0 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pos b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pos
+-deleted file mode 100644
+-index dd8c61f..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pos
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882605 0.0 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/params/cmd-sys.argv b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/params/cmd-sys.argv
+-deleted file mode 100644
+-index 39a41d7..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/params/cmd-sys.argv
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--scripts/run_strategy.py
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.runName b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.runName
+-deleted file mode 100644
+-index 25487e4..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.runName
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--mlflow_recorder
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.git.commit b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.git.commit
+-deleted file mode 100644
+-index e79a066..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.git.commit
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--980996838dcbbd42721feb5f80785fca716a8112
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.name b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.name
+-deleted file mode 100644
+-index 39a41d7..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.name
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--scripts/run_strategy.py
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.type b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.type
+-deleted file mode 100644
+-index 0c2c1fe..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.type
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--LOCAL
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.user b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.user
+-deleted file mode 100644
+-index c51bb5b..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.user
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--yimin.fu
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/meta.yaml b/mlruns/347281245549811582/meta.yaml
+-deleted file mode 100644
+-index 6be51ae..0000000
+---- a/mlruns/347281245549811582/meta.yaml
+-+++ /dev/null
+-@@ -1,6 +0,0 @@
+--artifact_location: file:///Users/yimin.fu/GolandProjects/stock/mlruns/347281245549811582
+--creation_time: 1773926024236
+--experiment_id: '347281245549811582'
+--last_update_time: 1773926024236
+--lifecycle_stage: active
+--name: csi1000_20260319_211344
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_cached.txt b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_cached.txt
+-deleted file mode 100644
+-index e69de29..0000000
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_diff.txt b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_diff.txt
+-deleted file mode 100644
+-index f8d2917..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_diff.txt
+-+++ /dev/null
+-@@ -1,31 +0,0 @@
+--diff --git a/config.yaml b/config.yaml
+--index 244a38f..2f40039 100644
+----- a/config.yaml
+--+++ b/config.yaml
+--@@ -104,20 +104,21 @@ dataset:
+--     # 数据集划分
+--     segments:
+--       train: ["2018-01-01", "2024-12-31"]  # 训练集
+---      valid: ["2025-01-01", "2025-12-31"]  # 验证集
+---      test:  ["2026-01-01", "2026-03-19"]  # 测试集
+--+      valid: ["2024-01-01", "2024-12-31"]  # 验证集
+--+      test:  ["2025-01-01", "2025-12-31"]  # 至少1年
+-- 
+-- # ==================== 回测配置 ====================
+-- port_analysis_config:
+--   
+--   # 交易策略配置
+--   strategy:
+---    class: "TopkDropoutStrategy"       # TopK策略：选择预测收益最高的K只股票
+---    module_path: "qlib.contrib.strategy"
+--+    class: "scripts.periodic_topk_strategy.PeriodicTopkStrategy"       # TopK策略：选择预测收益最高的K只股票
+--+    module_path: "scripts.periodic_topk_strategy"
+--     kwargs:
+--       signal: "<PRED>"                 # 使用模型预测值作为信号
+--       topk: 30                         # 持仓数量
+---      n_drop: 1                        # 每次调仓最多卖出x只
+--+      n_drop: 5              # 每次调仓最多换5只（5天不动了，放宽到5）
+--+      hold_days: 5           # ★ 每5个交易日调仓一次，对齐5日标签
+--   
+--   # 回测引擎配置
+--   backtest:
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_status.txt b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_status.txt
+-deleted file mode 100644
+-index 207bba4..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_status.txt
+-+++ /dev/null
+-@@ -1,16 +0,0 @@
+--位于分支 main
+--您的分支与上游分支 'origin/main' 一致。
+--
+--尚未暂存以备提交的变更：
+--  （使用 "git add <文件>..." 更新要提交的内容）
+--  （使用 "git restore <文件>..." 丢弃工作区的改动）
+--	修改：     config.yaml
+--
+--未跟踪的文件:
+--  （使用 "git add <文件>..." 以包含要提交的内容）
+--	mlruns/691821883015000086/
+--	scripts/__init__.py
+--	scripts/daily_signal.py
+--	scripts/periodic_topk_strategy.py
+--
+--修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/meta.yaml b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/meta.yaml
+-deleted file mode 100644
+-index 557270d..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/meta.yaml
+-+++ /dev/null
+-@@ -1,14 +0,0 @@
+--artifact_uri: file:///Users/yimin.fu/GolandProjects/stock/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts
+--end_time: null
+--entry_point_name: ''
+--experiment_id: '691821883015000086'
+--lifecycle_stage: active
+--run_id: 22676a1742ea480a9af520ff06af9d18
+--run_name: mlflow_recorder
+--source_name: ''
+--source_type: 4
+--source_version: ''
+--start_time: 1773931265632
+--status: 1
+--tags: []
+--user_id: yimin.fu
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/params/cmd-sys.argv b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/params/cmd-sys.argv
+-deleted file mode 100644
+-index 39a41d7..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/params/cmd-sys.argv
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--scripts/run_strategy.py
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.runName b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.runName
+-deleted file mode 100644
+-index 25487e4..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.runName
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--mlflow_recorder
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.git.commit b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.git.commit
+-deleted file mode 100644
+-index da62d4d..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.git.commit
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--5fa875748652ae0cc41c456eaee40892b649dce9
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.name b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.name
+-deleted file mode 100644
+-index 39a41d7..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.name
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--scripts/run_strategy.py
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.type b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.type
+-deleted file mode 100644
+-index 0c2c1fe..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.type
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--LOCAL
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.user b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.user
+-deleted file mode 100644
+-index c51bb5b..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.user
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--yimin.fu
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/meta.yaml b/mlruns/691821883015000086/meta.yaml
+-deleted file mode 100644
+-index 9940145..0000000
+---- a/mlruns/691821883015000086/meta.yaml
+-+++ /dev/null
+-@@ -1,6 +0,0 @@
+--artifact_location: file:///Users/yimin.fu/GolandProjects/stock/mlruns/691821883015000086
+--creation_time: 1773931265194
+--experiment_id: '691821883015000086'
+--last_update_time: 1773931265194
+--lifecycle_stage: active
+--name: csi1000_20260319_224105
+-diff --git a/scripts/daily_signal.py b/scripts/daily_signal.py
+-index cd65d89..eaf32d1 100644
+---- a/scripts/daily_signal.py
+-+++ b/scripts/daily_signal.py
+-@@ -3,16 +3,16 @@
+- 每日交易信号生成器
+- ==================
+- 
+--每天运行一次，输出当天的买卖信号。
+--基于已训练好的模型，对当前股票池生成预测排名。
+--
+--调仓间隔从 config.yaml 的 port_analysis_config.strategy.kwargs.hold_days 读取。
+-+职责：盘后运行，输出明天的候选股票池
+-+- 加载 run_strategy.py 训练好的模型
+-+- 增量更新数据
+-+- 纯推理，不做训练
+- 
+- 使用方式：
+--    # 首次：需要先训练模型并保存
+--    python scripts/daily_signal.py --train
+-+    # 第一步：先用 run_strategy.py 训练并回测，确认效果 OK
+-+    python scripts/run_strategy.py
+- 
+--    # 每日运行（自动读取 config.yaml 中的调仓间隔）
+-+    # 第二步：每天盘后跑这个（会自动增量更新数据）
+-     python scripts/daily_signal.py
+- """
+- 
+-@@ -21,157 +21,136 @@ import json
+- import yaml
+- import argparse
+- from pathlib import Path
+--from datetime import datetime, timedelta
+-+from datetime import datetime
+- 
+- import qlib
+--from qlib.utils import init_instance_by_config
+- from qlib.workflow import R
+--from qlib.data import D
+-+from qlib.utils import init_instance_by_config
+- 
+- 
+- # ============ 配置 ============
+- CONFIG_PATH = "config.yaml"
+--MODEL_SAVE_DIR = "models"
+- PORTFOLIO_FILE = "portfolio.json"
+- 
+- 
+--def load_config(config_path: str) -> dict:
+--    with open(config_path, 'r', encoding='utf-8') as f:
+-+def load_config(config_path=CONFIG_PATH):
+-+    with open(config_path, "r", encoding="utf-8") as f:
+-         return yaml.safe_load(f)
+- 
+- 
+--def get_today_str():
+--    """获取今天的日期字符串"""
+--    return datetime.now().strftime("%Y-%m-%d")
+--
+--
+--def load_portfolio(portfolio_file: str) -> dict:
+--    """加载当前持仓"""
+-+def load_portfolio(portfolio_file=PORTFOLIO_FILE):
+-     pf_path = Path(portfolio_file)
+-     if pf_path.exists():
+--        with open(pf_path, 'r', encoding='utf-8') as f:
+-+        with open(pf_path, "r", encoding="utf-8") as f:
+-             return json.load(f)
+-     return {"holdings": [], "cash": 100000, "updated": ""}
+- 
+- 
+--def save_portfolio(portfolio_file: str, portfolio: dict):
+--    """保存当前持仓"""
+--    portfolio["updated"] = get_today_str()
+--    with open(portfolio_file, 'w', encoding='utf-8') as f:
+-+def save_portfolio(portfolio, portfolio_file=PORTFOLIO_FILE):
+-+    portfolio["updated"] = datetime.now().strftime("%Y-%m-%d")
+-+    with open(portfolio_file, "w", encoding="utf-8") as f:
+-         json.dump(portfolio, f, ensure_ascii=False, indent=2)
+- 
+- 
+--def train_and_save(config: dict):
+--    """训练模型并保存"""
+--    print("=" * 60)
+--    print("🎯 训练模型并保存")
+--    print("=" * 60)
+--
+--    qlib.init(**config["qlib_init"])
+--
+--    model = init_instance_by_config(config["model"])
+--    dataset = init_instance_by_config(config["dataset"])
+--
+--    print("📊 正在训练...")
+--    model.fit(dataset)
+--
+--    # 保存模型
+--    model_dir = Path(MODEL_SAVE_DIR)
+--    model_dir.mkdir(exist_ok=True)
+--    model_path = model_dir / "latest_model.pkl"
+--
+--    import pickle
+--    with open(model_path, 'wb') as f:
+--        pickle.dump(model, f)
+--
+--    print(f"✅ 模型已保存到: {model_path}")
+--    return model, dataset
+-+# ================================================================
+-+#  核心：从 mlruns 加载 run_strategy.py 训练好的模型
+-+# ================================================================
+-+def load_trained_model(experiment_name=None):
+-+    """
+-+    从 qlib mlruns 中加载最近一次训练好的模型
+-+    experiment_name: 指定实验名，默认取最近一次
+-+    """
+-+    with R.start(experiment_name=experiment_name or "load_model", recorder_id=None):
+-+        pass  # 只初始化，不训练
+- 
+-+    # 获取最近的实验记录
+-+    if experiment_name:
+-+        exp = R.get_exp(experiment_name=experiment_name)
+-+    else:
+-+        # 遍历所有实验，找最近的
+-+        from mlflow.tracking import MlflowClient
+-+        client = MlflowClient()
+-+        experiments = client.search_experiments()
+-+        if not experiments:
+-+            print("❌ 没有找到任何实验，请先运行: python scripts/run_strategy.py")
+-+            sys.exit(1)
+-+
+-+        # 按最近修改时间排序
+-+        exp = None
+-+        latest_time = 0
+-+        for e in experiments:
+-+            runs = client.search_runs(experiment_ids=[e.experiment_id],
+-+                                      order_by=["attributes.start_time DESC"],
+-+                                      max_results=1)
+-+            if runs and runs[0].info.start_time > latest_time:
+-+                latest_time = runs[0].info.start_time
+-+                exp = e
+-+
+-+        if exp is None:
+-+            print("❌ 没有找到训练记录，请先运行: python scripts/run_strategy.py")
+-+            sys.exit(1)
+-+
+-+    # 获取最近一次 run
+-+    recorder = R.get_recorder(experiment_name=exp.name)
+-+    model = recorder.load_object("models/model.pkl")
+- 
+--def load_model():
+--    """加载已保存的模型"""
+--    import pickle
+--    model_path = Path(MODEL_SAVE_DIR) / "latest_model.pkl"
+--    if not model_path.exists():
+--        print(f"❌ 模型不存在: {model_path}")
+--        print("   请先运行: python scripts/daily_signal.py --train")
+-+    if model is None:
+-+        print(f"❌ 实验 [{exp.name}] 中没有保存的模型")
+-+        print("   请先运行: python scripts/run_strategy.py")
+-         sys.exit(1)
+- 
+--    with open(model_path, 'rb') as f:
+--        return pickle.load(f)
+-+    print(f"✅ 模型已加载 (实验: {exp.name})")
+-+    return model
+- 
+- 
+--def generate_signals(config: dict, model=None, dataset=None):
+-+# ================================================================
+-+#  信号生成
+-+# ================================================================
+-+def generate_signals(config, model):
+-     """
+--    生成今日交易信号
+--    返回: [(stock_code, score, rank), ...] 按预测分数降序
+-+    用已训练好的模型对最新数据生成预测
+-+    返回: (top_stocks, bottom_stocks)
+-     """
+-     qlib.init(**config["qlib_init"])
+- 
+--    if model is None:
+--        model = load_model()
+--
+--    # 获取股票池最新数据
+-     instruments = config["dataset"]["kwargs"]["handler"]["kwargs"]["instruments"]
+--
+--    # 使用今天作为预测日期（如果是非交易日会自动取最近交易日）
+--    today = get_today_str()
+--
+--    print(f"\n📅 生成信号日期: {today}")
+-     print(f"📈 股票池: {instruments}")
+- 
+--    # 获取特征数据并预测
+--    if dataset is None:
+--        dataset = init_instance_by_config(config["dataset"])
+--
+--    # 生成预测
+-+    # 构建 dataset（只用最新数据，不需要训练集）
+-+    dataset = init_instance_by_config(config["dataset"])
+-     pred = model.predict(dataset)
+-+
+-     if pred is None or len(pred) == 0:
+--        print("❌ 预测结果为空，请检查数据和模型")
+--        return []
+--
+--    # 取最新一天的预测结果
+--    if hasattr(pred, 'index'):
+--        # 如果是 Series/DataFrame
+--        latest_date = pred.index.get_level_values(0).max() if hasattr(pred.index, 'get_level_values') else pred.index.max()
+--        latest_pred = pred.loc[latest_date] if hasattr(pred, 'loc') else pred[pred.index == latest_date]
+-+        print("❌ 预测结果为空，请检查数据和 end_time 配置")
+-+        return [], []
+-+
+-+    # 取最新一天的预测
+-+    if hasattr(pred.index, "get_level_values"):
+-+        latest_date = pred.index.get_level_values(0).max()
+-+        latest_pred = pred.loc[latest_date]
+-     else:
+-         latest_pred = pred
+- 
+--    # 排序，取 top-k
+-     topk = config["port_analysis_config"]["strategy"]["kwargs"]["topk"]
+-     n_drop = config["port_analysis_config"]["strategy"]["kwargs"]["n_drop"]
+- 
+--    # 转为 list 排序
+--    if hasattr(latest_pred, 'sort_values'):
+--        sorted_pred = latest_pred.sort_values(ascending=False)
+--        top_stocks = [(str(idx), float(val), rank+1)
+--                      for rank, (idx, val) in enumerate(sorted_pred.head(topk).items())]
+--        bottom_stocks = [(str(idx), float(val), len(sorted_pred) - rank)
+--                         for rank, (idx, val) in enumerate(sorted_pred.tail(n_drop).items())]
+--    else:
+--        # 如果是 ndarray 等
+--        import numpy as np
+--        if hasattr(latest_pred, 'values'):
+--            vals = latest_pred.values
+--            idxs = latest_pred.index
+--        else:
+--            vals = latest_pred
+--            idxs = list(range(len(vals)))
+--
+--        ranked = sorted(zip(idxs, vals), key=lambda x: x[1], reverse=True)
+--        top_stocks = [(str(idx), float(val), rank+1)
+--                      for rank, (idx, val) in enumerate(ranked[:topk])]
+--        bottom_stocks = [(str(idx), float(val), len(ranked) - rank)
+--                         for rank, (idx, val) in enumerate(ranked[-n_drop:])]
+-+    sorted_pred = latest_pred.sort_values(ascending=False)
+-+    top_stocks = [
+-+        (str(idx), float(val), rank + 1)
+-+        for rank, (idx, val) in enumerate(sorted_pred.head(topk).items())
+-+    ]
+-+    bottom_stocks = [
+-+        (str(idx), float(val), rank + 1)
+-+        for rank, (idx, val) in enumerate(sorted_pred.tail(n_drop).items())
+-+    ]
+- 
+-     return top_stocks, bottom_stocks
+- 
+- 
+--def generate_trade_plan(config: dict, top_stocks, bottom_stocks, portfolio: dict) -> dict:
+--    """
+--    根据信号和当前持仓，生成具体的交易计划
+--    """
+-+# ================================================================
+-+#  交易计划
+-+# ================================================================
+-+def generate_trade_plan(config, top_stocks, bottom_stocks, portfolio):
+-     topk = config["port_analysis_config"]["strategy"]["kwargs"]["topk"]
+-     total_capital = portfolio.get("cash", 100000) + sum(
+-         h.get("value", 0) for h in portfolio.get("holdings", [])
+-@@ -179,201 +158,137 @@ def generate_trade_plan(config: dict, top_stocks, bottom_stocks, portfolio: dict
+- 
+-     current_holdings = {h["code"]: h for h in portfolio.get("holdings", [])}
+-     target_codes = {s[0] for s in top_stocks}
+-+    bottom_codes = {s[0] for s in bottom_stocks}
+- 
+--    buys = []
+--    sells = []
+-+    sells = [
+-+        {"action": "SELL", "code": code, "reason": "排名跌出"}
+-+        for code in current_holdings
+-+        if code in bottom_codes
+-+    ]
+- 
+--    # 卖出：当前持仓中不在 target 里的，且在 bottom 中的
+--    bottom_codes = {s[0] for s in bottom_stocks}
+--    for code, holding in current_holdings.items():
+--        if code in bottom_codes:
+--            sells.append({
+--                "action": "SELL",
+--                "code": code,
+--                "reason": f"排名跌出，预测分数={dict(bottom_stocks).get(code, 'N/A')}",
+--            })
+--
+--    # 买入：target 中当前未持仓的
+--    for code, score, rank in top_stocks:
+--        if code not in current_holdings:
+--            alloc = total_capital / topk
+--            buys.append({
+--                "action": "BUY",
+--                "code": code,
+--                "score": round(score, 6),
+--                "rank": rank,
+--                "suggest_amount": round(alloc, 0),
+--            })
+-+    buys = [
+-+        {
+-+            "action": "BUY",
+-+            "code": code,
+-+            "score": round(score, 6),
+-+            "rank": rank,
+-+            "suggest_amount": round(total_capital / topk, 0),
+-+        }
+-+        for code, score, rank in top_stocks
+-+        if code not in current_holdings
+-+    ]
+- 
+-     return {
+--        "date": get_today_str(),
+-+        "date": datetime.now().strftime("%Y-%m-%d"),
+-         "total_capital": round(total_capital, 2),
+--        "current_holdings_count": len(current_holdings),
+--        "target_holdings_count": topk,
+-+        "current_holdings": len(current_holdings),
+-+        "target": topk,
+-         "sells": sells,
+-         "buys": buys,
+-     }
+- 
+- 
+--def print_signal_report(top_stocks, bottom_stocks, trade_plan):
+--    """打印信号报告"""
+-+# ================================================================
+-+#  输出报告
+-+# ================================================================
+-+def print_report(top_stocks, bottom_stocks, trade_plan):
+-+    today = datetime.now().strftime("%Y-%m-%d")
+-     print("\n" + "=" * 60)
+--    print(f"📋 交易信号报告 - {get_today_str()}")
+-+    print(f"📋 交易信号报告 — {today}")
+-     print("=" * 60)
+- 
+--    print(f"\n🟢 买入信号 (Top {len(top_stocks)}):")
+-+    print(f"\n🟢 买入候选 (Top {len(top_stocks)}):")
+-     print(f"{'排名':>4}  {'股票代码':<12}  {'预测分数':>12}")
+-     print("-" * 35)
+--    for code, score, rank in top_stocks[:10]:  # 只显示前10
+-+    for code, score, rank in top_stocks:
+-         print(f"{rank:>4}  {code:<12}  {score:>12.6f}")
+--    if len(top_stocks) > 10:
+--        print(f"      ... 还有 {len(top_stocks) - 10} 只")
+- 
+--    print(f"\n🔴 卖出信号 (Bottom {len(bottom_stocks)}):")
+--    print(f"{'股票代码':<12}  {'预测分数':>12}")
+--    print("-" * 30)
+--    for code, score, _ in bottom_stocks:
+--        print(f"{code:<12}  {score:>12.6f}")
+-+    print(f"\n🔴 卖出候选 (Bottom {len(bottom_stocks)}):")
+-+    for code, score, rank in bottom_stocks:
+-+        print(f"  {code:<12}  {score:>12.6f}")
+- 
+--    # 交易计划
+-     print(f"\n📝 交易计划:")
+-     print(f"  总资金: ¥{trade_plan['total_capital']:,.0f}")
+--    print(f"  当前持仓: {trade_plan['current_holdings_count']} 只")
+--    print(f"  目标持仓: {trade_plan['target_holdings_count']} 只")
+-+    print(f"  当前持仓: {trade_plan['current_holdings']} → 目标: {trade_plan['target']}")
+- 
+-     if trade_plan["sells"]:
+--        print(f"\n  ⬇️ 需要卖出 ({len(trade_plan['sells'])} 只):")
+-+        print(f"\n  ⬇️ 卖出:")
+-         for s in trade_plan["sells"]:
+-             print(f"    SELL {s['code']}  ({s['reason']})")
+- 
+-     if trade_plan["buys"]:
+--        print(f"\n  ⬆️ 需要买入 ({len(trade_plan['buys'])} 只):")
+-+        print(f"\n  ⬆️ 买入:")
+-         for b in trade_plan["buys"]:
+--            print(f"    BUY  {b['code']}  排名#{b['rank']}  建议金额:¥{b['suggest_amount']:,.0f}")
+-+            print(f"    BUY  {b['code']}  #{b['rank']}  ¥{b['suggest_amount']:,.0f}")
+- 
+-     if not trade_plan["sells"] and not trade_plan["buys"]:
+--        print("\n  ✅ 今日无需调仓，持仓与目标一致")
+-+        print("\n  ✅ 无需调仓")
+- 
+-     print("\n" + "=" * 60)
+- 
+- 
+--def update_portfolio_after_trade(portfolio: dict, trade_plan: dict):
+--    """
+--    根据交易计划更新持仓（简化版，实际执行后手动确认）
+--    """
+--    # 移除卖出的
+--    sell_codes = {s["code"] for s in trade_plan["sells"]}
+--    portfolio["holdings"] = [
+--        h for h in portfolio["holdings"] if h["code"] not in sell_codes
+--    ]
+--
+--    # 添加买入的
+--    for b in trade_plan["buys"]:
+--        portfolio["holdings"].append({
+--            "code": b["code"],
+--            "score": b["score"],
+--            "rank": b["rank"],
+--            "buy_date": get_today_str(),
+--            "amount": b["suggest_amount"],
+--            "value": b["suggest_amount"],
+--        })
+--
+--    # 更新现金
+--    sell_amount = sum(b.get("suggest_amount", 0) for b in trade_plan["buys"])
+--    buy_amount = sum(s.get("suggest_amount", 0) for s in trade_plan["sells"])
+--    portfolio["cash"] = portfolio.get("cash", 100000) - sell_amount + buy_amount
+--
+--    return portfolio
+--
+--
+-+# ================================================================
+-+#  主入口
+-+# ================================================================
+- def main():
+--    parser = argparse.ArgumentParser(description="每日交易信号生成器")
+--    parser.add_argument("--config", default=CONFIG_PATH, help="配置文件路径")
+--    parser.add_argument("--portfolio", default=PORTFOLIO_FILE, help="持仓文件路径")
+--    parser.add_argument("--train", action="store_true", help="重新训练模型")
+--    parser.add_argument("--output", default=None, help="输出信号到文件")
+-+    parser = argparse.ArgumentParser(description="每日交易信号（纯推理，不训练）")
+-+    parser.add_argument("--config", default=CONFIG_PATH)
+-+    parser.add_argument("--experiment", default=None,
+-+                        help="指定实验名（默认取最近一次训练）")
+-+    parser.add_argument("--output", default=None,
+-+                        help="输出信号到 JSON 文件")
+-     args = parser.parse_args()
+- 
+--    # 加载配置
+-     config = load_config(args.config)
+- 
+--    # 从配置读取调仓间隔
+--    hold_days = config.get("port_analysis_config", {}).get("strategy", {}).get("kwargs", {}).get("hold_days", 1)
+-+    # ---- Step 1: 增量更新数据 ----
+-+    print("=" * 60)
+-+    print("📦 Step 1: 增量更新 qlib 数据")
+-+    print("=" * 60)
+-+    from scripts.update_daily_data import update_daily
+-+    latest_date = update_daily(
+-+        qlib_dir=config["qlib_init"]["provider_uri"],
+-+    )
+- 
+--    # 是否需要训练
+--    if args.train:
+--        model, dataset = train_and_save(config)
+--    else:
+--        model = None
+--        dataset = None
+--
+--    # 加载持仓
+--    portfolio = load_portfolio(args.portfolio)
+--
+--    # 检查是否是调仓日
+--    if hold_days > 1:
+--        last_rebalance = portfolio.get("last_rebalance", "")
+--        today = get_today_str()
+--
+--        if last_rebalance:
+--            from datetime import datetime as dt
+--            last_date = dt.strptime(last_rebalance, "%Y-%m-%d")
+--            today_date = dt.strptime(today, "%Y-%m-%d")
+--            elapsed_days = (today_date - last_date).days
+--
+--            # 简单估算：大约1.4个交易日/自然日
+--            # A股一年约244个交易日，365自然日，比例≈0.67
+--            trading_days_est = int(elapsed_days * 0.67)
+--
+--            if trading_days_est < hold_days and elapsed_days > 0:
+--                remaining = hold_days - trading_days_est
+--                print(f"⏸️  今天不是调仓日")
+--                print(f"   上次调仓: {last_rebalance}")
+--                print(f"   已过约 {trading_days_est} 个交易日（自然日 {elapsed_days} 天）")
+--                print(f"   距下次调仓还剩约 {remaining} 个交易日")
+--                print(f"   持仓保持不变，不生成新信号")
+--                print(f"\n   如需强制调仓：删除 portfolio.json 中的 last_rebalance 字段")
+--                return
+--            else:
+--                print(f"📅 今天是调仓日（距上次 {elapsed_days} 自然日，约 {trading_days_est} 个交易日）")
+--        else:
+--            print("📅 首次运行，今日作为调仓日")
+--
+--    # 生成信号
+--    top_stocks, bottom_stocks = generate_signals(config, model, dataset)
+-+    # 动态更新 config 的 end_time
+-+    if latest_date:
+-+        config["dataset"]["kwargs"]["handler"]["kwargs"]["end_time"] = str(latest_date)
+-+        config["port_analysis_config"]["backtest"]["end_time"] = str(latest_date)
+-+        print(f"📅 end_time 已更新为: {latest_date}\n")
+-+
+-+    # ---- Step 2: 加载模型 ----
+-+    print("=" * 60)
+-+    print("🧠 Step 2: 加载模型")
+-+    print("=" * 60)
+-+    model = load_trained_model(experiment_name=args.experiment)
+-+
+-+    # ---- Step 3: 生成信号 ----
+-+    print("\n" + "=" * 60)
+-+    print("📊 Step 3: 生成预测信号")
+-+    print("=" * 60)
+-+    top_stocks, bottom_stocks = generate_signals(config, model)
+- 
+-     if not top_stocks:
+--        print("❌ 未能生成信号，请检查配置和数据")
+--        return
+-+        print("❌ 没有生成任何信号")
+-+        sys.exit(1)
+- 
+--    # 生成交易计划
+-+    # ---- Step 4: 交易计划 ----
+-+    portfolio = load_portfolio()
+-     trade_plan = generate_trade_plan(config, top_stocks, bottom_stocks, portfolio)
+- 
+--    # 打印报告
+--    print_signal_report(top_stocks, bottom_stocks, trade_plan)
+-+    # ---- 输出 ----
+-+    print_report(top_stocks, bottom_stocks, trade_plan)
+- 
+--    # 输出到文件
+-+    # 保存到文件
+-     if args.output:
+--        with open(args.output, 'w', encoding='utf-8') as f:
+--            json.dump({
+--                "signals": {
+--                    "top": [(c, s, r) for c, s, r in top_stocks],
+--                    "bottom": [(c, s, r) for c, s, r in bottom_stocks],
+--                },
+--                "trade_plan": trade_plan,
+--            }, f, ensure_ascii=False, indent=2)
+--        print(f"\n📁 信号已保存到: {args.output}")
+--
+--    # 询问是否更新持仓
+--    print(f"\n💾 持仓文件: {args.portfolio}")
+--    print(f"   调仓间隔: 每 {hold_days} 个交易日")
+--    print(f"   执行完交易后，更新 portfolio.json 并记录 last_rebalance 日期")
+--
+--    # 自动记录调仓日期到 portfolio
+--    if trade_plan["sells"] or trade_plan["buys"]:
+--        portfolio["last_rebalance"] = get_today_str()
+--        save_portfolio(args.portfolio, portfolio)
+--        print(f"   ✅ 已自动记录调仓日期: {get_today_str()}")
+-+        result = {
+-+            "top_stocks": top_stocks,
+-+            "bottom_stocks": bottom_stocks,
+-+            "trade_plan": trade_plan,
+-+        }
+-+        with open(args.output, "w", encoding="utf-8") as f:
+-+            json.dump(result, f, ensure_ascii=False, indent=2)
+-+        print(f"\n💾 信号已保存到: {args.output}")
+- 
+- 
+- if __name__ == "__main__":
+-diff --git a/scripts/periodic_topk_strategy.py b/scripts/periodic_topk_strategy.py
+-index bdf1b34..21471f0 100644
+---- a/scripts/periodic_topk_strategy.py
+-+++ b/scripts/periodic_topk_strategy.py
+-@@ -9,8 +9,8 @@
+- 配置方式（config.yaml）:
+- 
+-   strategy:
+--    class: "scripts.periodic_topk_strategy.PeriodicTopkStrategy"
+--    module_path: "scripts.periodic_topk_strategy"
+-+    class: "PeriodicTopkStrategy"
+-+    module_path: "periodic_topk_strategy"
+-     kwargs:
+-       signal: "<PRED>"
+-       topk: 30
+-diff --git a/scripts/run_strategy.py b/scripts/run_strategy.py
+-index e9f3039..1c0c61c 100644
+---- a/scripts/run_strategy.py
+-+++ b/scripts/run_strategy.py
+-@@ -22,7 +22,11 @@ from qlib.workflow import R
+- from qlib.workflow.record_temp import SignalRecord, PortAnaRecord
+- from qlib.utils import init_instance_by_config
+- 
+-+# 添加 scripts 目录到 Python 路径，以便导入自定义策略
+-+project_root = Path(__file__).resolve().parent.parent
+-+sys.path.insert(0, str(project_root / "scripts"))
+- 
+-+ 
+- def load_config(config_path: str = "config.yaml") -> dict:
+-     """加载配置文件"""
+-     config_file = Path(config_path)
+diff --git a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_status.txt b/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_status.txt
+deleted file mode 100644
+index b6dc040..0000000
+--- a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_status.txt
++++ /dev/null
+@@ -1,61 +0,0 @@
+-位于分支 main
+-您的分支与上游分支 'origin/main' 一致。
+-
+-尚未暂存以备提交的变更：
+-  （使用 "git add/rm <文件>..." 更新要提交的内容）
+-  （使用 "git restore <文件>..." 丢弃工作区的改动）
+-	修改：     config.yaml
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_cached.txt
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_diff.txt
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_status.txt
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/label.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicator_analysis_1day.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day_obj.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/port_analysis_1day.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/positions_normal_1day.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/report_normal_1day.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/pred.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/meta.yaml
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.annualized_return
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.information_ratio
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.max_drawdown
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.mean
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.std
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.annualized_return
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.information_ratio
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.max_drawdown
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.mean
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.std
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.ffr
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pa
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pos
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/params/cmd-sys.argv
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.runName
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.git.commit
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.name
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.type
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.user
+-	删除：     mlruns/347281245549811582/meta.yaml
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_cached.txt
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_diff.txt
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_status.txt
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/meta.yaml
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/params/cmd-sys.argv
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.runName
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.git.commit
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.name
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.type
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.user
+-	删除：     mlruns/691821883015000086/meta.yaml
+-	修改：     scripts/daily_signal.py
+-	修改：     scripts/periodic_topk_strategy.py
+-	修改：     scripts/run_strategy.py
+-
+-未跟踪的文件:
+-  （使用 "git add <文件>..." 以包含要提交的内容）
+-	mlruns/215440135751376164/
+-	mlruns/661605342228750048/
+-	scripts/update_daily_data.py
+-
+-修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）
+diff --git a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/meta.yaml b/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/meta.yaml
+deleted file mode 100644
+index b4cd103..0000000
+--- a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/meta.yaml
++++ /dev/null
+@@ -1,14 +0,0 @@
+-artifact_uri: file:///Users/yimin.fu/GolandProjects/stock/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts
+-end_time: null
+-entry_point_name: ''
+-experiment_id: '215440135751376164'
+-lifecycle_stage: active
+-run_id: 4452cecf82594684ae5e0892f9a829b2
+-run_name: mlflow_recorder
+-source_name: ''
+-source_type: 4
+-source_version: ''
+-start_time: 1773978852269
+-status: 1
+-tags: []
+-user_id: yimin.fu
+diff --git a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/params/cmd-sys.argv b/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/params/cmd-sys.argv
+deleted file mode 100644
+index 39a41d7..0000000
+--- a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/params/cmd-sys.argv
++++ /dev/null
+@@ -1 +0,0 @@
+-scripts/run_strategy.py
+\ No newline at end of file
+diff --git a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.runName b/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.runName
+deleted file mode 100644
+index 25487e4..0000000
+--- a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.runName
++++ /dev/null
+@@ -1 +0,0 @@
+-mlflow_recorder
+\ No newline at end of file
+diff --git a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.git.commit b/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.git.commit
+deleted file mode 100644
+index d8d4247..0000000
+--- a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.git.commit
++++ /dev/null
+@@ -1 +0,0 @@
+-8921c4c25b11606c8ac8ed00a194ff5c28b04781
+\ No newline at end of file
+diff --git a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.name b/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.name
+deleted file mode 100644
+index 39a41d7..0000000
+--- a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.name
++++ /dev/null
+@@ -1 +0,0 @@
+-scripts/run_strategy.py
+\ No newline at end of file
+diff --git a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.type b/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.type
+deleted file mode 100644
+index 0c2c1fe..0000000
+--- a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.type
++++ /dev/null
+@@ -1 +0,0 @@
+-LOCAL
+\ No newline at end of file
+diff --git a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.user b/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.user
+deleted file mode 100644
+index c51bb5b..0000000
+--- a/mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.user
++++ /dev/null
+@@ -1 +0,0 @@
+-yimin.fu
+\ No newline at end of file
+diff --git a/mlruns/215440135751376164/meta.yaml b/mlruns/215440135751376164/meta.yaml
+deleted file mode 100644
+index 4e50adb..0000000
+--- a/mlruns/215440135751376164/meta.yaml
++++ /dev/null
+@@ -1,6 +0,0 @@
+-artifact_location: file:///Users/yimin.fu/GolandProjects/stock/mlruns/215440135751376164
+-creation_time: 1773978851770
+-experiment_id: '215440135751376164'
+-last_update_time: 1773978851770
+-lifecycle_stage: active
+-name: all_except_688_BJ_20260320_115411
+diff --git a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_cached.txt b/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_cached.txt
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_diff.txt b/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_diff.txt
+deleted file mode 100644
+index 88fc7d8..0000000
+--- a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_diff.txt
++++ /dev/null
+@@ -1,1152 +0,0 @@
+-diff --git a/config.yaml b/config.yaml
+-index 2f40039..553342e 100644
+---- a/config.yaml
+-+++ b/config.yaml
+-@@ -13,13 +13,14 @@ qlib_init:
+- #   - csi800: 中证800（沪深300+中证500）
+- #   - csi1000: 中证1000（小盘股）
+- #   - all: 全市场所有股票
+--market: "csi1000"
+-+#   - all_except_688_BJ: 全市场所有股票，不包括科创板和北交所
+-+market: "all_except_688_BJ"
+- 
+- # benchmark: 基准指数，用于计算超额收益
+- #   - SH000300: 沪深300指数
+- #   - SH000905: 中证500指数
+- #   - SH000852: 中证1000指数
+--benchmark: "SH000852"
+-+benchmark: "SH000300"
+- 
+- # ==================== 模型配置 ====================
+- model:
+-@@ -52,7 +53,7 @@ model:
+-     lambda_l2: 10                      # L2正则化系数
+-     
+-     # 性能参数
+--    num_threads: 20                    # 并行线程数
+-+    num_threads: 8                    # 并行线程数
+- 
+- # ==================== 数据集配置 ====================
+- dataset:
+-@@ -78,9 +79,9 @@ dataset:
+-         #   - 重要：只能用训练集数据，否则会产生数据泄漏（look-ahead bias）
+-         #   - 通常设置为训练集的时间范围
+-         fit_start_time: "2018-01-01"   # 训练集开始
+--        fit_end_time: "2024-12-31"     # 训练集结束
+-+        fit_end_time: "2023-12-31"     # 训练集结束
+-         
+--        instruments: "csi1000"          # 股票池（需与上面market保持一致）
+-+        instruments: "all_except_688_BJ"          # 股票池（需与上面market保持一致）
+-         
+-         # 推理时的数据处理（用于预测）
+-         infer_processors:
+-@@ -103,26 +104,26 @@ dataset:
+-     
+-     # 数据集划分
+-     segments:
+--      train: ["2018-01-01", "2024-12-31"]  # 训练集
+-+      train: ["2018-01-01", "2023-12-31"]  # 训练集
+-       valid: ["2024-01-01", "2024-12-31"]  # 验证集
+--      test:  ["2025-01-01", "2025-12-31"]  # 至少1年
+-+      test:  ["2025-01-01", "2026-03-19"]  # 至少1年
+- 
+- # ==================== 回测配置 ====================
+- port_analysis_config:
+-   
+-   # 交易策略配置
+-   strategy:
+--    class: "scripts.periodic_topk_strategy.PeriodicTopkStrategy"       # TopK策略：选择预测收益最高的K只股票
+--    module_path: "scripts.periodic_topk_strategy"
+-+    class: "PeriodicTopkStrategy"       # 周期调仓策略
+-+    module_path: "periodic_topk_strategy"
+-     kwargs:
+-       signal: "<PRED>"                 # 使用模型预测值作为信号
+-       topk: 30                         # 持仓数量
+--      n_drop: 5              # 每次调仓最多换5只（5天不动了，放宽到5）
+--      hold_days: 5           # ★ 每5个交易日调仓一次，对齐5日标签
+-+      n_drop: 5                        # 每次调仓最多换5只
+-+      hold_days: 5                     # ★ 每x个交易日调仓一次
+-   
+-   # 回测引擎配置
+-   backtest:
+--    start_time: "2026-01-01"           # 回测开始日期
+-+    start_time: "2025-01-01"           # 回测开始日期
+-     end_time: "2026-03-19"             # 回测结束日期
+-     account: 100000                    # 初始资金：10万元
+-     benchmark: "SH000300"              # 基准指数（用于计算超额收益）
+-@@ -135,7 +136,7 @@ port_analysis_config:
+-       limit_threshold: 0.095           # 涨跌停阈值：9.5%（A股涨跌停限制为10%，留0.5%缓冲）
+-       
+-       # 成交价格
+--      deal_price: "close"              # 使用收盘价成交（也可选择"open", "vwap"等）
+-+      deal_price: "open"              #"open", "vwap", "close"
+-       
+-       # 交易成本
+-       open_cost: 0.0003                # 开仓手续费率：0.05%（券商佣金，一般为万分之5）
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_cached.txt b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_cached.txt
+-deleted file mode 100644
+-index e69de29..0000000
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_diff.txt b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_diff.txt
+-deleted file mode 100644
+-index 0f63738..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_diff.txt
+-+++ /dev/null
+-@@ -1,111 +0,0 @@
+--diff --git a/config.yaml b/config.yaml
+--index 40a97bf..244a38f 100644
+----- a/config.yaml
+--+++ b/config.yaml
+--@@ -19,32 +19,40 @@ market: "csi1000"
+-- #   - SH000300: 沪深300指数
+-- #   - SH000905: 中证500指数
+-- #   - SH000852: 中证1000指数
+---benchmark: "SH000300"
+--+benchmark: "SH000852"
+-- 
+-- # ==================== 模型配置 ====================
+-- model:
+---  class: "LGBModel"                    # LightGBM模型
+---  module_path: "qlib.contrib.model.gbdt"
+--+  class: "DEnsembleModel"                    # 双重集成模型（更强大）
+--+  module_path: "qlib.contrib.model.double_ensemble"
+--   kwargs:
+---    loss: "mse"                        # 损失函数：均方误差
+--+    # 集成模型参数
+--+    base_model: "gbm"        # 底层模型：梯度提升机
+--+    epochs: 100              # 训练轮数
+--+    num_models: 5            # 训练数据分成5份（集成5个子模型）
+--+    enable_sr: true          # 开启样本重加权
+--+    enable_fs: true          # 开启特征选择
+--+    decay: 0.9               # 样本重加权的衰减因子（必需参数）
+--     
+--+    loss: "mse"                        # 损失函数：均方误差
+--     # 树结构参数
+---    max_depth: 8                       # 树的最大深度，控制模型复杂度（典型值：3-10）
+---    num_leaves: 210                    # 叶子节点数，越大模型越复杂（典型值：31-255）
+--+    max_depth: 6                       # 树的最大深度
+--+    num_leaves: 63                     # 叶子节点数
+--     
+--     # 学习参数
+---    learning_rate: 0.2                 # 学习率，控制每棵树的贡献（典型值：0.01-0.3）
+--+    learning_rate: 0.05                # 学习率
+--+    num_estimators: 500                # 树的数量
+--     
+--     # 采样参数（防止过拟合）
+---    subsample: 0.8789                  # 样本采样比例，每棵树使用87.89%的样本
+---    colsample_bytree: 0.8879           # 特征采样比例，每棵树使用88.79%的特征
+--+    subsample: 0.8789                  # 样本采样比例
+--+    colsample_bytree: 0.8879           # 特征采样比例
+--     
+--     # 正则化参数（防止过拟合）
+---    lambda_l1: 205.6999                # L1正则化系数（Lasso），使模型稀疏
+---    lambda_l2: 580.9768                # L2正则化系数（Ridge），防止权重过大
+--+    lambda_l1: 10                      # L1正则化系数
+--+    lambda_l2: 10                      # L2正则化系数
+--     
+--     # 性能参数
+---    num_threads: 20                    # 并行线程数，根据CPU核心数调整
+--+    num_threads: 20                    # 并行线程数
+-- 
+-- # ==================== 数据集配置 ====================
+-- dataset:
+--@@ -55,20 +63,21 @@ dataset:
+--       class: "Alpha158"                # Alpha158因子集（158个量价技术指标）
+--       module_path: "qlib.contrib.data.handler"
+--       kwargs:
+--+        label: ["Ref($close, -5)/Ref($close, -1) - 1"]  # 未来5日收益
+--         # ===== 时间范围说明 =====
+--         # start_time/end_time: 从Qlib加载数据的时间范围
+--         #   - 需要覆盖训练集、验证集、测试集的全部时间
+--         #   - 当前数据覆盖：2000-01-04 ~ 2026-03-19（26年完整历史）
+--         #   - 用途：决定从数据库读取哪些日期的原始行情数据
+---        start_time: "2008-01-01"       # 从2008年开始（避免早期数据质量问题）
+---        end_time: "2025-12-31"         # 到2025年底（2026年数据不完整）
+--+        start_time: "2008-01-01"       
+--+        end_time: "2026-03-19"         
+--         
+--         # fit_start_time/fit_end_time: 拟合数据预处理器的时间范围
+--         #   - 仅用于训练集！用来计算特征的统计量（均值、标准差等）
+--         #   - 例如：RobustZScoreNorm需要计算每个特征的均值和标准差
+--         #   - 重要：只能用训练集数据，否则会产生数据泄漏（look-ahead bias）
+--         #   - 通常设置为训练集的时间范围
+---        fit_start_time: "2023-01-01"   # 训练集开始
+--+        fit_start_time: "2018-01-01"   # 训练集开始
+--         fit_end_time: "2024-12-31"     # 训练集结束
+--         
+--         instruments: "csi1000"          # 股票池（需与上面market保持一致）
+--@@ -94,7 +103,7 @@ dataset:
+--     
+--     # 数据集划分
+--     segments:
+---      train: ["2023-01-01", "2024-12-31"]  # 训练集
+--+      train: ["2018-01-01", "2024-12-31"]  # 训练集
+--       valid: ["2025-01-01", "2025-12-31"]  # 验证集
+--       test:  ["2026-01-01", "2026-03-19"]  # 测试集
+-- 
+--@@ -107,8 +116,8 @@ port_analysis_config:
+--     module_path: "qlib.contrib.strategy"
+--     kwargs:
+--       signal: "<PRED>"                 # 使用模型预测值作为信号
+---      topk: 10                         # 持仓数量
+---      n_drop: 2                        # 每次调仓最多卖出x只
+--+      topk: 30                         # 持仓数量
+--+      n_drop: 1                        # 每次调仓最多卖出x只
+--   
+--   # 回测引擎配置
+--   backtest:
+--@@ -128,6 +137,6 @@ port_analysis_config:
+--       deal_price: "close"              # 使用收盘价成交（也可选择"open", "vwap"等）
+--       
+--       # 交易成本
+---      open_cost: 0.0005                # 开仓手续费率：0.05%（券商佣金，一般为万分之5）
+---      close_cost: 0.0015               # 平仓手续费率：0.15%（佣金0.05% + 印花税0.1%）
+--+      open_cost: 0.0003                # 开仓手续费率：0.05%（券商佣金，一般为万分之5）
+--+      close_cost: 0.0013               # 平仓手续费率：0.15%（佣金0.05% + 印花税0.1%）
+--       min_cost: 5                      # 最小手续费：5元/笔（小额交易的最低收费）
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_status.txt b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_status.txt
+-deleted file mode 100644
+-index 2f9c430..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_status.txt
+-+++ /dev/null
+-@@ -1,9 +0,0 @@
+--位于分支 main
+--您的分支与上游分支 'origin/main' 一致。
+--
+--尚未暂存以备提交的变更：
+--  （使用 "git add <文件>..." 更新要提交的内容）
+--  （使用 "git restore <文件>..." 丢弃工作区的改动）
+--	修改：     config.yaml
+--
+--修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/label.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/label.pkl
+-deleted file mode 100644
+-index 7f3d218..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/label.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicator_analysis_1day.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicator_analysis_1day.pkl
+-deleted file mode 100644
+-index d4ad03f..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicator_analysis_1day.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day.pkl
+-deleted file mode 100644
+-index 6ff55a9..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day_obj.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day_obj.pkl
+-deleted file mode 100644
+-index 155ee16..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day_obj.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/port_analysis_1day.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/port_analysis_1day.pkl
+-deleted file mode 100644
+-index 2b33700..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/port_analysis_1day.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/positions_normal_1day.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/positions_normal_1day.pkl
+-deleted file mode 100644
+-index 063f8bb..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/positions_normal_1day.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/report_normal_1day.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/report_normal_1day.pkl
+-deleted file mode 100644
+-index 38d562f..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/report_normal_1day.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/pred.pkl b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/pred.pkl
+-deleted file mode 100644
+-index ccc8f2e..0000000
+-Binary files a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/pred.pkl and /dev/null differ
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/meta.yaml b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/meta.yaml
+-deleted file mode 100644
+-index f833754..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/meta.yaml
+-+++ /dev/null
+-@@ -1,14 +0,0 @@
+--artifact_uri: file:///Users/yimin.fu/GolandProjects/stock/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts
+--end_time: 1773928882607
+--entry_point_name: ''
+--experiment_id: '347281245549811582'
+--lifecycle_stage: active
+--run_id: 055cfb2c8006409181e629e5b19a205c
+--run_name: mlflow_recorder
+--source_name: ''
+--source_type: 4
+--source_version: ''
+--start_time: 1773926024661
+--status: 3
+--tags: []
+--user_id: yimin.fu
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.annualized_return b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.annualized_return
+-deleted file mode 100644
+-index 416f009..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.annualized_return
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882594 0.13460818939476807 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.information_ratio b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.information_ratio
+-deleted file mode 100644
+-index 3d5fd57..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.information_ratio
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882595 1.1445412778614108 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.max_drawdown b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.max_drawdown
+-deleted file mode 100644
+-index 5ec23d2..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.max_drawdown
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882597 -0.01730344290052093 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.mean b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.mean
+-deleted file mode 100644
+-index 4edefcb..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.mean
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882590 0.0005655806277091095 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.std b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.std
+-deleted file mode 100644
+-index 113ede5..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.std
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882592 0.007623449784994902 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.annualized_return b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.annualized_return
+-deleted file mode 100644
+-index e1406ab..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.annualized_return
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882576 0.1657232141802653 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.information_ratio b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.information_ratio
+-deleted file mode 100644
+-index 7c4349f..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.information_ratio
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882586 1.4200302769585862 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.max_drawdown b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.max_drawdown
+-deleted file mode 100644
+-index dc84602..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.max_drawdown
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882588 -0.016565576328340277 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.mean b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.mean
+-deleted file mode 100644
+-index d1ec672..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.mean
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882563 0.0006963160259675014 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.std b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.std
+-deleted file mode 100644
+-index 1b44ad0..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.std
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882574 0.0075647967690349255 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.ffr b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.ffr
+-deleted file mode 100644
+-index 3b220d4..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.ffr
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882599 1.0 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pa b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pa
+-deleted file mode 100644
+-index a4b0b80..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pa
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882600 0.0 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pos b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pos
+-deleted file mode 100644
+-index dd8c61f..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pos
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--1773928882605 0.0 0
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/params/cmd-sys.argv b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/params/cmd-sys.argv
+-deleted file mode 100644
+-index 39a41d7..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/params/cmd-sys.argv
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--scripts/run_strategy.py
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.runName b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.runName
+-deleted file mode 100644
+-index 25487e4..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.runName
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--mlflow_recorder
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.git.commit b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.git.commit
+-deleted file mode 100644
+-index e79a066..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.git.commit
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--980996838dcbbd42721feb5f80785fca716a8112
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.name b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.name
+-deleted file mode 100644
+-index 39a41d7..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.name
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--scripts/run_strategy.py
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.type b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.type
+-deleted file mode 100644
+-index 0c2c1fe..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.type
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--LOCAL
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.user b/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.user
+-deleted file mode 100644
+-index c51bb5b..0000000
+---- a/mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.user
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--yimin.fu
+-\ No newline at end of file
+-diff --git a/mlruns/347281245549811582/meta.yaml b/mlruns/347281245549811582/meta.yaml
+-deleted file mode 100644
+-index 6be51ae..0000000
+---- a/mlruns/347281245549811582/meta.yaml
+-+++ /dev/null
+-@@ -1,6 +0,0 @@
+--artifact_location: file:///Users/yimin.fu/GolandProjects/stock/mlruns/347281245549811582
+--creation_time: 1773926024236
+--experiment_id: '347281245549811582'
+--last_update_time: 1773926024236
+--lifecycle_stage: active
+--name: csi1000_20260319_211344
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_cached.txt b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_cached.txt
+-deleted file mode 100644
+-index e69de29..0000000
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_diff.txt b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_diff.txt
+-deleted file mode 100644
+-index f8d2917..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_diff.txt
+-+++ /dev/null
+-@@ -1,31 +0,0 @@
+--diff --git a/config.yaml b/config.yaml
+--index 244a38f..2f40039 100644
+----- a/config.yaml
+--+++ b/config.yaml
+--@@ -104,20 +104,21 @@ dataset:
+--     # 数据集划分
+--     segments:
+--       train: ["2018-01-01", "2024-12-31"]  # 训练集
+---      valid: ["2025-01-01", "2025-12-31"]  # 验证集
+---      test:  ["2026-01-01", "2026-03-19"]  # 测试集
+--+      valid: ["2024-01-01", "2024-12-31"]  # 验证集
+--+      test:  ["2025-01-01", "2025-12-31"]  # 至少1年
+-- 
+-- # ==================== 回测配置 ====================
+-- port_analysis_config:
+--   
+--   # 交易策略配置
+--   strategy:
+---    class: "TopkDropoutStrategy"       # TopK策略：选择预测收益最高的K只股票
+---    module_path: "qlib.contrib.strategy"
+--+    class: "scripts.periodic_topk_strategy.PeriodicTopkStrategy"       # TopK策略：选择预测收益最高的K只股票
+--+    module_path: "scripts.periodic_topk_strategy"
+--     kwargs:
+--       signal: "<PRED>"                 # 使用模型预测值作为信号
+--       topk: 30                         # 持仓数量
+---      n_drop: 1                        # 每次调仓最多卖出x只
+--+      n_drop: 5              # 每次调仓最多换5只（5天不动了，放宽到5）
+--+      hold_days: 5           # ★ 每5个交易日调仓一次，对齐5日标签
+--   
+--   # 回测引擎配置
+--   backtest:
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_status.txt b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_status.txt
+-deleted file mode 100644
+-index 207bba4..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_status.txt
+-+++ /dev/null
+-@@ -1,16 +0,0 @@
+--位于分支 main
+--您的分支与上游分支 'origin/main' 一致。
+--
+--尚未暂存以备提交的变更：
+--  （使用 "git add <文件>..." 更新要提交的内容）
+--  （使用 "git restore <文件>..." 丢弃工作区的改动）
+--	修改：     config.yaml
+--
+--未跟踪的文件:
+--  （使用 "git add <文件>..." 以包含要提交的内容）
+--	mlruns/691821883015000086/
+--	scripts/__init__.py
+--	scripts/daily_signal.py
+--	scripts/periodic_topk_strategy.py
+--
+--修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/meta.yaml b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/meta.yaml
+-deleted file mode 100644
+-index 557270d..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/meta.yaml
+-+++ /dev/null
+-@@ -1,14 +0,0 @@
+--artifact_uri: file:///Users/yimin.fu/GolandProjects/stock/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts
+--end_time: null
+--entry_point_name: ''
+--experiment_id: '691821883015000086'
+--lifecycle_stage: active
+--run_id: 22676a1742ea480a9af520ff06af9d18
+--run_name: mlflow_recorder
+--source_name: ''
+--source_type: 4
+--source_version: ''
+--start_time: 1773931265632
+--status: 1
+--tags: []
+--user_id: yimin.fu
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/params/cmd-sys.argv b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/params/cmd-sys.argv
+-deleted file mode 100644
+-index 39a41d7..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/params/cmd-sys.argv
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--scripts/run_strategy.py
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.runName b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.runName
+-deleted file mode 100644
+-index 25487e4..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.runName
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--mlflow_recorder
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.git.commit b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.git.commit
+-deleted file mode 100644
+-index da62d4d..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.git.commit
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--5fa875748652ae0cc41c456eaee40892b649dce9
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.name b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.name
+-deleted file mode 100644
+-index 39a41d7..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.name
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--scripts/run_strategy.py
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.type b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.type
+-deleted file mode 100644
+-index 0c2c1fe..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.type
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--LOCAL
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.user b/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.user
+-deleted file mode 100644
+-index c51bb5b..0000000
+---- a/mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.user
+-+++ /dev/null
+-@@ -1 +0,0 @@
+--yimin.fu
+-\ No newline at end of file
+-diff --git a/mlruns/691821883015000086/meta.yaml b/mlruns/691821883015000086/meta.yaml
+-deleted file mode 100644
+-index 9940145..0000000
+---- a/mlruns/691821883015000086/meta.yaml
+-+++ /dev/null
+-@@ -1,6 +0,0 @@
+--artifact_location: file:///Users/yimin.fu/GolandProjects/stock/mlruns/691821883015000086
+--creation_time: 1773931265194
+--experiment_id: '691821883015000086'
+--last_update_time: 1773931265194
+--lifecycle_stage: active
+--name: csi1000_20260319_224105
+-diff --git a/scripts/daily_signal.py b/scripts/daily_signal.py
+-index cd65d89..eaf32d1 100644
+---- a/scripts/daily_signal.py
+-+++ b/scripts/daily_signal.py
+-@@ -3,16 +3,16 @@
+- 每日交易信号生成器
+- ==================
+- 
+--每天运行一次，输出当天的买卖信号。
+--基于已训练好的模型，对当前股票池生成预测排名。
+--
+--调仓间隔从 config.yaml 的 port_analysis_config.strategy.kwargs.hold_days 读取。
+-+职责：盘后运行，输出明天的候选股票池
+-+- 加载 run_strategy.py 训练好的模型
+-+- 增量更新数据
+-+- 纯推理，不做训练
+- 
+- 使用方式：
+--    # 首次：需要先训练模型并保存
+--    python scripts/daily_signal.py --train
+-+    # 第一步：先用 run_strategy.py 训练并回测，确认效果 OK
+-+    python scripts/run_strategy.py
+- 
+--    # 每日运行（自动读取 config.yaml 中的调仓间隔）
+-+    # 第二步：每天盘后跑这个（会自动增量更新数据）
+-     python scripts/daily_signal.py
+- """
+- 
+-@@ -21,157 +21,136 @@ import json
+- import yaml
+- import argparse
+- from pathlib import Path
+--from datetime import datetime, timedelta
+-+from datetime import datetime
+- 
+- import qlib
+--from qlib.utils import init_instance_by_config
+- from qlib.workflow import R
+--from qlib.data import D
+-+from qlib.utils import init_instance_by_config
+- 
+- 
+- # ============ 配置 ============
+- CONFIG_PATH = "config.yaml"
+--MODEL_SAVE_DIR = "models"
+- PORTFOLIO_FILE = "portfolio.json"
+- 
+- 
+--def load_config(config_path: str) -> dict:
+--    with open(config_path, 'r', encoding='utf-8') as f:
+-+def load_config(config_path=CONFIG_PATH):
+-+    with open(config_path, "r", encoding="utf-8") as f:
+-         return yaml.safe_load(f)
+- 
+- 
+--def get_today_str():
+--    """获取今天的日期字符串"""
+--    return datetime.now().strftime("%Y-%m-%d")
+--
+--
+--def load_portfolio(portfolio_file: str) -> dict:
+--    """加载当前持仓"""
+-+def load_portfolio(portfolio_file=PORTFOLIO_FILE):
+-     pf_path = Path(portfolio_file)
+-     if pf_path.exists():
+--        with open(pf_path, 'r', encoding='utf-8') as f:
+-+        with open(pf_path, "r", encoding="utf-8") as f:
+-             return json.load(f)
+-     return {"holdings": [], "cash": 100000, "updated": ""}
+- 
+- 
+--def save_portfolio(portfolio_file: str, portfolio: dict):
+--    """保存当前持仓"""
+--    portfolio["updated"] = get_today_str()
+--    with open(portfolio_file, 'w', encoding='utf-8') as f:
+-+def save_portfolio(portfolio, portfolio_file=PORTFOLIO_FILE):
+-+    portfolio["updated"] = datetime.now().strftime("%Y-%m-%d")
+-+    with open(portfolio_file, "w", encoding="utf-8") as f:
+-         json.dump(portfolio, f, ensure_ascii=False, indent=2)
+- 
+- 
+--def train_and_save(config: dict):
+--    """训练模型并保存"""
+--    print("=" * 60)
+--    print("🎯 训练模型并保存")
+--    print("=" * 60)
+--
+--    qlib.init(**config["qlib_init"])
+--
+--    model = init_instance_by_config(config["model"])
+--    dataset = init_instance_by_config(config["dataset"])
+--
+--    print("📊 正在训练...")
+--    model.fit(dataset)
+--
+--    # 保存模型
+--    model_dir = Path(MODEL_SAVE_DIR)
+--    model_dir.mkdir(exist_ok=True)
+--    model_path = model_dir / "latest_model.pkl"
+--
+--    import pickle
+--    with open(model_path, 'wb') as f:
+--        pickle.dump(model, f)
+--
+--    print(f"✅ 模型已保存到: {model_path}")
+--    return model, dataset
+-+# ================================================================
+-+#  核心：从 mlruns 加载 run_strategy.py 训练好的模型
+-+# ================================================================
+-+def load_trained_model(experiment_name=None):
+-+    """
+-+    从 qlib mlruns 中加载最近一次训练好的模型
+-+    experiment_name: 指定实验名，默认取最近一次
+-+    """
+-+    with R.start(experiment_name=experiment_name or "load_model", recorder_id=None):
+-+        pass  # 只初始化，不训练
+- 
+-+    # 获取最近的实验记录
+-+    if experiment_name:
+-+        exp = R.get_exp(experiment_name=experiment_name)
+-+    else:
+-+        # 遍历所有实验，找最近的
+-+        from mlflow.tracking import MlflowClient
+-+        client = MlflowClient()
+-+        experiments = client.search_experiments()
+-+        if not experiments:
+-+            print("❌ 没有找到任何实验，请先运行: python scripts/run_strategy.py")
+-+            sys.exit(1)
+-+
+-+        # 按最近修改时间排序
+-+        exp = None
+-+        latest_time = 0
+-+        for e in experiments:
+-+            runs = client.search_runs(experiment_ids=[e.experiment_id],
+-+                                      order_by=["attributes.start_time DESC"],
+-+                                      max_results=1)
+-+            if runs and runs[0].info.start_time > latest_time:
+-+                latest_time = runs[0].info.start_time
+-+                exp = e
+-+
+-+        if exp is None:
+-+            print("❌ 没有找到训练记录，请先运行: python scripts/run_strategy.py")
+-+            sys.exit(1)
+-+
+-+    # 获取最近一次 run
+-+    recorder = R.get_recorder(experiment_name=exp.name)
+-+    model = recorder.load_object("models/model.pkl")
+- 
+--def load_model():
+--    """加载已保存的模型"""
+--    import pickle
+--    model_path = Path(MODEL_SAVE_DIR) / "latest_model.pkl"
+--    if not model_path.exists():
+--        print(f"❌ 模型不存在: {model_path}")
+--        print("   请先运行: python scripts/daily_signal.py --train")
+-+    if model is None:
+-+        print(f"❌ 实验 [{exp.name}] 中没有保存的模型")
+-+        print("   请先运行: python scripts/run_strategy.py")
+-         sys.exit(1)
+- 
+--    with open(model_path, 'rb') as f:
+--        return pickle.load(f)
+-+    print(f"✅ 模型已加载 (实验: {exp.name})")
+-+    return model
+- 
+- 
+--def generate_signals(config: dict, model=None, dataset=None):
+-+# ================================================================
+-+#  信号生成
+-+# ================================================================
+-+def generate_signals(config, model):
+-     """
+--    生成今日交易信号
+--    返回: [(stock_code, score, rank), ...] 按预测分数降序
+-+    用已训练好的模型对最新数据生成预测
+-+    返回: (top_stocks, bottom_stocks)
+-     """
+-     qlib.init(**config["qlib_init"])
+- 
+--    if model is None:
+--        model = load_model()
+--
+--    # 获取股票池最新数据
+-     instruments = config["dataset"]["kwargs"]["handler"]["kwargs"]["instruments"]
+--
+--    # 使用今天作为预测日期（如果是非交易日会自动取最近交易日）
+--    today = get_today_str()
+--
+--    print(f"\n📅 生成信号日期: {today}")
+-     print(f"📈 股票池: {instruments}")
+- 
+--    # 获取特征数据并预测
+--    if dataset is None:
+--        dataset = init_instance_by_config(config["dataset"])
+--
+--    # 生成预测
+-+    # 构建 dataset（只用最新数据，不需要训练集）
+-+    dataset = init_instance_by_config(config["dataset"])
+-     pred = model.predict(dataset)
+-+
+-     if pred is None or len(pred) == 0:
+--        print("❌ 预测结果为空，请检查数据和模型")
+--        return []
+--
+--    # 取最新一天的预测结果
+--    if hasattr(pred, 'index'):
+--        # 如果是 Series/DataFrame
+--        latest_date = pred.index.get_level_values(0).max() if hasattr(pred.index, 'get_level_values') else pred.index.max()
+--        latest_pred = pred.loc[latest_date] if hasattr(pred, 'loc') else pred[pred.index == latest_date]
+-+        print("❌ 预测结果为空，请检查数据和 end_time 配置")
+-+        return [], []
+-+
+-+    # 取最新一天的预测
+-+    if hasattr(pred.index, "get_level_values"):
+-+        latest_date = pred.index.get_level_values(0).max()
+-+        latest_pred = pred.loc[latest_date]
+-     else:
+-         latest_pred = pred
+- 
+--    # 排序，取 top-k
+-     topk = config["port_analysis_config"]["strategy"]["kwargs"]["topk"]
+-     n_drop = config["port_analysis_config"]["strategy"]["kwargs"]["n_drop"]
+- 
+--    # 转为 list 排序
+--    if hasattr(latest_pred, 'sort_values'):
+--        sorted_pred = latest_pred.sort_values(ascending=False)
+--        top_stocks = [(str(idx), float(val), rank+1)
+--                      for rank, (idx, val) in enumerate(sorted_pred.head(topk).items())]
+--        bottom_stocks = [(str(idx), float(val), len(sorted_pred) - rank)
+--                         for rank, (idx, val) in enumerate(sorted_pred.tail(n_drop).items())]
+--    else:
+--        # 如果是 ndarray 等
+--        import numpy as np
+--        if hasattr(latest_pred, 'values'):
+--            vals = latest_pred.values
+--            idxs = latest_pred.index
+--        else:
+--            vals = latest_pred
+--            idxs = list(range(len(vals)))
+--
+--        ranked = sorted(zip(idxs, vals), key=lambda x: x[1], reverse=True)
+--        top_stocks = [(str(idx), float(val), rank+1)
+--                      for rank, (idx, val) in enumerate(ranked[:topk])]
+--        bottom_stocks = [(str(idx), float(val), len(ranked) - rank)
+--                         for rank, (idx, val) in enumerate(ranked[-n_drop:])]
+-+    sorted_pred = latest_pred.sort_values(ascending=False)
+-+    top_stocks = [
+-+        (str(idx), float(val), rank + 1)
+-+        for rank, (idx, val) in enumerate(sorted_pred.head(topk).items())
+-+    ]
+-+    bottom_stocks = [
+-+        (str(idx), float(val), rank + 1)
+-+        for rank, (idx, val) in enumerate(sorted_pred.tail(n_drop).items())
+-+    ]
+- 
+-     return top_stocks, bottom_stocks
+- 
+- 
+--def generate_trade_plan(config: dict, top_stocks, bottom_stocks, portfolio: dict) -> dict:
+--    """
+--    根据信号和当前持仓，生成具体的交易计划
+--    """
+-+# ================================================================
+-+#  交易计划
+-+# ================================================================
+-+def generate_trade_plan(config, top_stocks, bottom_stocks, portfolio):
+-     topk = config["port_analysis_config"]["strategy"]["kwargs"]["topk"]
+-     total_capital = portfolio.get("cash", 100000) + sum(
+-         h.get("value", 0) for h in portfolio.get("holdings", [])
+-@@ -179,201 +158,137 @@ def generate_trade_plan(config: dict, top_stocks, bottom_stocks, portfolio: dict
+- 
+-     current_holdings = {h["code"]: h for h in portfolio.get("holdings", [])}
+-     target_codes = {s[0] for s in top_stocks}
+-+    bottom_codes = {s[0] for s in bottom_stocks}
+- 
+--    buys = []
+--    sells = []
+-+    sells = [
+-+        {"action": "SELL", "code": code, "reason": "排名跌出"}
+-+        for code in current_holdings
+-+        if code in bottom_codes
+-+    ]
+- 
+--    # 卖出：当前持仓中不在 target 里的，且在 bottom 中的
+--    bottom_codes = {s[0] for s in bottom_stocks}
+--    for code, holding in current_holdings.items():
+--        if code in bottom_codes:
+--            sells.append({
+--                "action": "SELL",
+--                "code": code,
+--                "reason": f"排名跌出，预测分数={dict(bottom_stocks).get(code, 'N/A')}",
+--            })
+--
+--    # 买入：target 中当前未持仓的
+--    for code, score, rank in top_stocks:
+--        if code not in current_holdings:
+--            alloc = total_capital / topk
+--            buys.append({
+--                "action": "BUY",
+--                "code": code,
+--                "score": round(score, 6),
+--                "rank": rank,
+--                "suggest_amount": round(alloc, 0),
+--            })
+-+    buys = [
+-+        {
+-+            "action": "BUY",
+-+            "code": code,
+-+            "score": round(score, 6),
+-+            "rank": rank,
+-+            "suggest_amount": round(total_capital / topk, 0),
+-+        }
+-+        for code, score, rank in top_stocks
+-+        if code not in current_holdings
+-+    ]
+- 
+-     return {
+--        "date": get_today_str(),
+-+        "date": datetime.now().strftime("%Y-%m-%d"),
+-         "total_capital": round(total_capital, 2),
+--        "current_holdings_count": len(current_holdings),
+--        "target_holdings_count": topk,
+-+        "current_holdings": len(current_holdings),
+-+        "target": topk,
+-         "sells": sells,
+-         "buys": buys,
+-     }
+- 
+- 
+--def print_signal_report(top_stocks, bottom_stocks, trade_plan):
+--    """打印信号报告"""
+-+# ================================================================
+-+#  输出报告
+-+# ================================================================
+-+def print_report(top_stocks, bottom_stocks, trade_plan):
+-+    today = datetime.now().strftime("%Y-%m-%d")
+-     print("\n" + "=" * 60)
+--    print(f"📋 交易信号报告 - {get_today_str()}")
+-+    print(f"📋 交易信号报告 — {today}")
+-     print("=" * 60)
+- 
+--    print(f"\n🟢 买入信号 (Top {len(top_stocks)}):")
+-+    print(f"\n🟢 买入候选 (Top {len(top_stocks)}):")
+-     print(f"{'排名':>4}  {'股票代码':<12}  {'预测分数':>12}")
+-     print("-" * 35)
+--    for code, score, rank in top_stocks[:10]:  # 只显示前10
+-+    for code, score, rank in top_stocks:
+-         print(f"{rank:>4}  {code:<12}  {score:>12.6f}")
+--    if len(top_stocks) > 10:
+--        print(f"      ... 还有 {len(top_stocks) - 10} 只")
+- 
+--    print(f"\n🔴 卖出信号 (Bottom {len(bottom_stocks)}):")
+--    print(f"{'股票代码':<12}  {'预测分数':>12}")
+--    print("-" * 30)
+--    for code, score, _ in bottom_stocks:
+--        print(f"{code:<12}  {score:>12.6f}")
+-+    print(f"\n🔴 卖出候选 (Bottom {len(bottom_stocks)}):")
+-+    for code, score, rank in bottom_stocks:
+-+        print(f"  {code:<12}  {score:>12.6f}")
+- 
+--    # 交易计划
+-     print(f"\n📝 交易计划:")
+-     print(f"  总资金: ¥{trade_plan['total_capital']:,.0f}")
+--    print(f"  当前持仓: {trade_plan['current_holdings_count']} 只")
+--    print(f"  目标持仓: {trade_plan['target_holdings_count']} 只")
+-+    print(f"  当前持仓: {trade_plan['current_holdings']} → 目标: {trade_plan['target']}")
+- 
+-     if trade_plan["sells"]:
+--        print(f"\n  ⬇️ 需要卖出 ({len(trade_plan['sells'])} 只):")
+-+        print(f"\n  ⬇️ 卖出:")
+-         for s in trade_plan["sells"]:
+-             print(f"    SELL {s['code']}  ({s['reason']})")
+- 
+-     if trade_plan["buys"]:
+--        print(f"\n  ⬆️ 需要买入 ({len(trade_plan['buys'])} 只):")
+-+        print(f"\n  ⬆️ 买入:")
+-         for b in trade_plan["buys"]:
+--            print(f"    BUY  {b['code']}  排名#{b['rank']}  建议金额:¥{b['suggest_amount']:,.0f}")
+-+            print(f"    BUY  {b['code']}  #{b['rank']}  ¥{b['suggest_amount']:,.0f}")
+- 
+-     if not trade_plan["sells"] and not trade_plan["buys"]:
+--        print("\n  ✅ 今日无需调仓，持仓与目标一致")
+-+        print("\n  ✅ 无需调仓")
+- 
+-     print("\n" + "=" * 60)
+- 
+- 
+--def update_portfolio_after_trade(portfolio: dict, trade_plan: dict):
+--    """
+--    根据交易计划更新持仓（简化版，实际执行后手动确认）
+--    """
+--    # 移除卖出的
+--    sell_codes = {s["code"] for s in trade_plan["sells"]}
+--    portfolio["holdings"] = [
+--        h for h in portfolio["holdings"] if h["code"] not in sell_codes
+--    ]
+--
+--    # 添加买入的
+--    for b in trade_plan["buys"]:
+--        portfolio["holdings"].append({
+--            "code": b["code"],
+--            "score": b["score"],
+--            "rank": b["rank"],
+--            "buy_date": get_today_str(),
+--            "amount": b["suggest_amount"],
+--            "value": b["suggest_amount"],
+--        })
+--
+--    # 更新现金
+--    sell_amount = sum(b.get("suggest_amount", 0) for b in trade_plan["buys"])
+--    buy_amount = sum(s.get("suggest_amount", 0) for s in trade_plan["sells"])
+--    portfolio["cash"] = portfolio.get("cash", 100000) - sell_amount + buy_amount
+--
+--    return portfolio
+--
+--
+-+# ================================================================
+-+#  主入口
+-+# ================================================================
+- def main():
+--    parser = argparse.ArgumentParser(description="每日交易信号生成器")
+--    parser.add_argument("--config", default=CONFIG_PATH, help="配置文件路径")
+--    parser.add_argument("--portfolio", default=PORTFOLIO_FILE, help="持仓文件路径")
+--    parser.add_argument("--train", action="store_true", help="重新训练模型")
+--    parser.add_argument("--output", default=None, help="输出信号到文件")
+-+    parser = argparse.ArgumentParser(description="每日交易信号（纯推理，不训练）")
+-+    parser.add_argument("--config", default=CONFIG_PATH)
+-+    parser.add_argument("--experiment", default=None,
+-+                        help="指定实验名（默认取最近一次训练）")
+-+    parser.add_argument("--output", default=None,
+-+                        help="输出信号到 JSON 文件")
+-     args = parser.parse_args()
+- 
+--    # 加载配置
+-     config = load_config(args.config)
+- 
+--    # 从配置读取调仓间隔
+--    hold_days = config.get("port_analysis_config", {}).get("strategy", {}).get("kwargs", {}).get("hold_days", 1)
+-+    # ---- Step 1: 增量更新数据 ----
+-+    print("=" * 60)
+-+    print("📦 Step 1: 增量更新 qlib 数据")
+-+    print("=" * 60)
+-+    from scripts.update_daily_data import update_daily
+-+    latest_date = update_daily(
+-+        qlib_dir=config["qlib_init"]["provider_uri"],
+-+    )
+- 
+--    # 是否需要训练
+--    if args.train:
+--        model, dataset = train_and_save(config)
+--    else:
+--        model = None
+--        dataset = None
+--
+--    # 加载持仓
+--    portfolio = load_portfolio(args.portfolio)
+--
+--    # 检查是否是调仓日
+--    if hold_days > 1:
+--        last_rebalance = portfolio.get("last_rebalance", "")
+--        today = get_today_str()
+--
+--        if last_rebalance:
+--            from datetime import datetime as dt
+--            last_date = dt.strptime(last_rebalance, "%Y-%m-%d")
+--            today_date = dt.strptime(today, "%Y-%m-%d")
+--            elapsed_days = (today_date - last_date).days
+--
+--            # 简单估算：大约1.4个交易日/自然日
+--            # A股一年约244个交易日，365自然日，比例≈0.67
+--            trading_days_est = int(elapsed_days * 0.67)
+--
+--            if trading_days_est < hold_days and elapsed_days > 0:
+--                remaining = hold_days - trading_days_est
+--                print(f"⏸️  今天不是调仓日")
+--                print(f"   上次调仓: {last_rebalance}")
+--                print(f"   已过约 {trading_days_est} 个交易日（自然日 {elapsed_days} 天）")
+--                print(f"   距下次调仓还剩约 {remaining} 个交易日")
+--                print(f"   持仓保持不变，不生成新信号")
+--                print(f"\n   如需强制调仓：删除 portfolio.json 中的 last_rebalance 字段")
+--                return
+--            else:
+--                print(f"📅 今天是调仓日（距上次 {elapsed_days} 自然日，约 {trading_days_est} 个交易日）")
+--        else:
+--            print("📅 首次运行，今日作为调仓日")
+--
+--    # 生成信号
+--    top_stocks, bottom_stocks = generate_signals(config, model, dataset)
+-+    # 动态更新 config 的 end_time
+-+    if latest_date:
+-+        config["dataset"]["kwargs"]["handler"]["kwargs"]["end_time"] = str(latest_date)
+-+        config["port_analysis_config"]["backtest"]["end_time"] = str(latest_date)
+-+        print(f"📅 end_time 已更新为: {latest_date}\n")
+-+
+-+    # ---- Step 2: 加载模型 ----
+-+    print("=" * 60)
+-+    print("🧠 Step 2: 加载模型")
+-+    print("=" * 60)
+-+    model = load_trained_model(experiment_name=args.experiment)
+-+
+-+    # ---- Step 3: 生成信号 ----
+-+    print("\n" + "=" * 60)
+-+    print("📊 Step 3: 生成预测信号")
+-+    print("=" * 60)
+-+    top_stocks, bottom_stocks = generate_signals(config, model)
+- 
+-     if not top_stocks:
+--        print("❌ 未能生成信号，请检查配置和数据")
+--        return
+-+        print("❌ 没有生成任何信号")
+-+        sys.exit(1)
+- 
+--    # 生成交易计划
+-+    # ---- Step 4: 交易计划 ----
+-+    portfolio = load_portfolio()
+-     trade_plan = generate_trade_plan(config, top_stocks, bottom_stocks, portfolio)
+- 
+--    # 打印报告
+--    print_signal_report(top_stocks, bottom_stocks, trade_plan)
+-+    # ---- 输出 ----
+-+    print_report(top_stocks, bottom_stocks, trade_plan)
+- 
+--    # 输出到文件
+-+    # 保存到文件
+-     if args.output:
+--        with open(args.output, 'w', encoding='utf-8') as f:
+--            json.dump({
+--                "signals": {
+--                    "top": [(c, s, r) for c, s, r in top_stocks],
+--                    "bottom": [(c, s, r) for c, s, r in bottom_stocks],
+--                },
+--                "trade_plan": trade_plan,
+--            }, f, ensure_ascii=False, indent=2)
+--        print(f"\n📁 信号已保存到: {args.output}")
+--
+--    # 询问是否更新持仓
+--    print(f"\n💾 持仓文件: {args.portfolio}")
+--    print(f"   调仓间隔: 每 {hold_days} 个交易日")
+--    print(f"   执行完交易后，更新 portfolio.json 并记录 last_rebalance 日期")
+--
+--    # 自动记录调仓日期到 portfolio
+--    if trade_plan["sells"] or trade_plan["buys"]:
+--        portfolio["last_rebalance"] = get_today_str()
+--        save_portfolio(args.portfolio, portfolio)
+--        print(f"   ✅ 已自动记录调仓日期: {get_today_str()}")
+-+        result = {
+-+            "top_stocks": top_stocks,
+-+            "bottom_stocks": bottom_stocks,
+-+            "trade_plan": trade_plan,
+-+        }
+-+        with open(args.output, "w", encoding="utf-8") as f:
+-+            json.dump(result, f, ensure_ascii=False, indent=2)
+-+        print(f"\n💾 信号已保存到: {args.output}")
+- 
+- 
+- if __name__ == "__main__":
+-diff --git a/scripts/periodic_topk_strategy.py b/scripts/periodic_topk_strategy.py
+-index bdf1b34..21471f0 100644
+---- a/scripts/periodic_topk_strategy.py
+-+++ b/scripts/periodic_topk_strategy.py
+-@@ -9,8 +9,8 @@
+- 配置方式（config.yaml）:
+- 
+-   strategy:
+--    class: "scripts.periodic_topk_strategy.PeriodicTopkStrategy"
+--    module_path: "scripts.periodic_topk_strategy"
+-+    class: "PeriodicTopkStrategy"
+-+    module_path: "periodic_topk_strategy"
+-     kwargs:
+-       signal: "<PRED>"
+-       topk: 30
+-diff --git a/scripts/run_strategy.py b/scripts/run_strategy.py
+-index e9f3039..1c0c61c 100644
+---- a/scripts/run_strategy.py
+-+++ b/scripts/run_strategy.py
+-@@ -22,7 +22,11 @@ from qlib.workflow import R
+- from qlib.workflow.record_temp import SignalRecord, PortAnaRecord
+- from qlib.utils import init_instance_by_config
+- 
+-+# 添加 scripts 目录到 Python 路径，以便导入自定义策略
+-+project_root = Path(__file__).resolve().parent.parent
+-+sys.path.insert(0, str(project_root / "scripts"))
+- 
+-+ 
+- def load_config(config_path: str = "config.yaml") -> dict:
+-     """加载配置文件"""
+-     config_file = Path(config_path)
+diff --git a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_status.txt b/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_status.txt
+deleted file mode 100644
+index b02d694..0000000
+--- a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_status.txt
++++ /dev/null
+@@ -1,60 +0,0 @@
+-位于分支 main
+-您的分支与上游分支 'origin/main' 一致。
+-
+-尚未暂存以备提交的变更：
+-  （使用 "git add/rm <文件>..." 更新要提交的内容）
+-  （使用 "git restore <文件>..." 丢弃工作区的改动）
+-	修改：     config.yaml
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_cached.txt
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_diff.txt
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_status.txt
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/label.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicator_analysis_1day.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day_obj.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/port_analysis_1day.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/positions_normal_1day.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/report_normal_1day.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/pred.pkl
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/meta.yaml
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.annualized_return
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.information_ratio
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.max_drawdown
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.mean
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.std
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.annualized_return
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.information_ratio
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.max_drawdown
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.mean
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.std
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.ffr
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pa
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pos
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/params/cmd-sys.argv
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.runName
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.git.commit
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.name
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.type
+-	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.user
+-	删除：     mlruns/347281245549811582/meta.yaml
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_cached.txt
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_diff.txt
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_status.txt
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/meta.yaml
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/params/cmd-sys.argv
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.runName
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.git.commit
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.name
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.type
+-	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.user
+-	删除：     mlruns/691821883015000086/meta.yaml
+-	修改：     scripts/daily_signal.py
+-	修改：     scripts/periodic_topk_strategy.py
+-	修改：     scripts/run_strategy.py
+-
+-未跟踪的文件:
+-  （使用 "git add <文件>..." 以包含要提交的内容）
+-	mlruns/661605342228750048/
+-	scripts/update_daily_data.py
+-
+-修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）
+diff --git a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/meta.yaml b/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/meta.yaml
+deleted file mode 100644
+index f8ed0bf..0000000
+--- a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/meta.yaml
++++ /dev/null
+@@ -1,14 +0,0 @@
+-artifact_uri: file:///Users/yimin.fu/GolandProjects/stock/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts
+-end_time: null
+-entry_point_name: ''
+-experiment_id: '661605342228750048'
+-lifecycle_stage: active
+-run_id: 887d0b7e13114b9a896c3fef84c6c311
+-run_name: mlflow_recorder
+-source_name: ''
+-source_type: 4
+-source_version: ''
+-start_time: 1773977797276
+-status: 1
+-tags: []
+-user_id: yimin.fu
+diff --git a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/params/cmd-sys.argv b/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/params/cmd-sys.argv
+deleted file mode 100644
+index 39a41d7..0000000
+--- a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/params/cmd-sys.argv
++++ /dev/null
+@@ -1 +0,0 @@
+-scripts/run_strategy.py
+\ No newline at end of file
+diff --git a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.runName b/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.runName
+deleted file mode 100644
+index 25487e4..0000000
+--- a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.runName
++++ /dev/null
+@@ -1 +0,0 @@
+-mlflow_recorder
+\ No newline at end of file
+diff --git a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.git.commit b/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.git.commit
+deleted file mode 100644
+index d8d4247..0000000
+--- a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.git.commit
++++ /dev/null
+@@ -1 +0,0 @@
+-8921c4c25b11606c8ac8ed00a194ff5c28b04781
+\ No newline at end of file
+diff --git a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.name b/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.name
+deleted file mode 100644
+index 39a41d7..0000000
+--- a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.name
++++ /dev/null
+@@ -1 +0,0 @@
+-scripts/run_strategy.py
+\ No newline at end of file
+diff --git a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.type b/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.type
+deleted file mode 100644
+index 0c2c1fe..0000000
+--- a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.type
++++ /dev/null
+@@ -1 +0,0 @@
+-LOCAL
+\ No newline at end of file
+diff --git a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.user b/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.user
+deleted file mode 100644
+index c51bb5b..0000000
+--- a/mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.user
++++ /dev/null
+@@ -1 +0,0 @@
+-yimin.fu
+\ No newline at end of file
+diff --git a/mlruns/661605342228750048/meta.yaml b/mlruns/661605342228750048/meta.yaml
+deleted file mode 100644
+index c7a0e17..0000000
+--- a/mlruns/661605342228750048/meta.yaml
++++ /dev/null
+@@ -1,6 +0,0 @@
+-artifact_location: file:///Users/yimin.fu/GolandProjects/stock/mlruns/661605342228750048
+-creation_time: 1773977796870
+-experiment_id: '661605342228750048'
+-last_update_time: 1773977796870
+-lifecycle_stage: active
+-name: all_except_688_BJ_20260320_113636
+diff --git a/scripts/__init__.py b/scripts/__init__.py
+index e69de29..b18d79e 100644
+--- a/scripts/__init__.py
++++ b/scripts/__init__.py
+@@ -0,0 +1,3 @@
++"""
++Scripts package for stock quantitative strategy.
++"""
+diff --git a/scripts/daily_signal.py b/scripts/daily_signal.py
+index eaf32d1..87a6bfb 100644
+--- a/scripts/daily_signal.py
++++ b/scripts/daily_signal.py
+@@ -13,6 +13,7 @@
+     python scripts/run_strategy.py
+ 
+     # 第二步：每天盘后跑这个（会自动增量更新数据）
++    # ⚠️ 必须在项目根目录执行（不要在 scripts/ 里）
+     python scripts/daily_signal.py
+ """
+ 
+@@ -55,11 +56,15 @@ def save_portfolio(portfolio, portfolio_file=PORTFOLIO_FILE):
+ # ================================================================
+ #  核心：从 mlruns 加载 run_strategy.py 训练好的模型
+ # ================================================================
+-def load_trained_model(experiment_name=None):
++def load_trained_model(config, experiment_name=None):
+     """
+     从 qlib mlruns 中加载最近一次训练好的模型
++    config: 配置字典，用于初始化 qlib
+     experiment_name: 指定实验名，默认取最近一次
+     """
++    # 先初始化 qlib（使用配置中的路径）
++    qlib.init(**config["qlib_init"])
++    
+     with R.start(experiment_name=experiment_name or "load_model", recorder_id=None):
+         pass  # 只初始化，不训练
+ 
+@@ -92,15 +97,19 @@ def load_trained_model(experiment_name=None):
+ 
+     # 获取最近一次 run
+     recorder = R.get_recorder(experiment_name=exp.name)
+-    model = recorder.load_object("models/model.pkl")
+-
+-    if model is None:
+-        print(f"❌ 实验 [{exp.name}] 中没有保存的模型")
+-        print("   请先运行: python scripts/run_strategy.py")
+-        sys.exit(1)
+-
+-    print(f"✅ 模型已加载 (实验: {exp.name})")
+-    return model
++    
++    # 加载模型
++    try:
++        model = recorder.load_object("trained_model")
++        if model is not None:
++            print(f"✅ 模型已加载 (实验: {exp.name})")
++            return model
++    except Exception as e:
++        pass
++    
++    print(f"❌ 实验 [{exp.name}] 中没有保存的模型")
++    print("   请先运行: python scripts/run_strategy.py")
++    sys.exit(1)
+ 
+ 
+ # ================================================================
+@@ -110,9 +119,8 @@ def generate_signals(config, model):
+     """
+     用已训练好的模型对最新数据生成预测
+     返回: (top_stocks, bottom_stocks)
++    注意：qlib 已在 load_trained_model 中初始化
+     """
+-    qlib.init(**config["qlib_init"])
+-
+     instruments = config["dataset"]["kwargs"]["handler"]["kwargs"]["instruments"]
+     print(f"📈 股票池: {instruments}")
+ 
+@@ -243,24 +251,47 @@ def main():
+ 
+     # ---- Step 1: 增量更新数据 ----
+     print("=" * 60)
+-    print("📦 Step 1: 增量更新 qlib 数据")
++    print("📦 Step 1: 检查数据更新")
+     print("=" * 60)
+-    from scripts.update_daily_data import update_daily
+-    latest_date = update_daily(
+-        qlib_dir=config["qlib_init"]["provider_uri"],
+-    )
++    
++    # 动态导入 update_daily（兼容从根目录或 scripts/ 运行）
++    try:
++        from scripts.update_daily_data import update_daily, load_calendar
++    except ModuleNotFoundError:
++        # 从 scripts/ 内运行时，用相对导入
++        from update_daily_data import update_daily, load_calendar
++    
++    # 检查当前数据的最新日期
++    qlib_dir = config["qlib_init"]["provider_uri"]
++    calendar, _ = load_calendar(qlib_dir)
++    
++    if calendar:
++        latest_date = calendar[-1]
++        today = datetime.now().strftime("%Y-%m-%d")
++        print(f"📅 数据最新日期: {latest_date}")
++        print(f"📅 今天日期: {today}")
++        
++        # 如果数据已是今天或更新（周末/节假日可能数据日期早于今天）
++        if latest_date >= today:
++            print("✅ 数据已是最新，跳过更新步骤\n")
++        else:
++            print("⬇️  数据需要更新，开始下载...\n")
++            latest_date = update_daily(qlib_dir=qlib_dir)
++    else:
++        print("⚠️  未找到 calendar 数据，将下载最新数据...\n")
++        latest_date = update_daily(qlib_dir=qlib_dir)
+ 
+     # 动态更新 config 的 end_time
+     if latest_date:
+         config["dataset"]["kwargs"]["handler"]["kwargs"]["end_time"] = str(latest_date)
+         config["port_analysis_config"]["backtest"]["end_time"] = str(latest_date)
+-        print(f"📅 end_time 已更新为: {latest_date}\n")
++        print(f"📅 end_time 已设置为: {latest_date}\n")
+ 
+     # ---- Step 2: 加载模型 ----
+     print("=" * 60)
+     print("🧠 Step 2: 加载模型")
+     print("=" * 60)
+-    model = load_trained_model(experiment_name=args.experiment)
++    model = load_trained_model(config, experiment_name=args.experiment)
+ 
+     # ---- Step 3: 生成信号 ----
+     print("\n" + "=" * 60)
+diff --git a/scripts/run_strategy.py b/scripts/run_strategy.py
+index 1c0c61c..b75cc59 100644
+--- a/scripts/run_strategy.py
++++ b/scripts/run_strategy.py
+@@ -90,6 +90,10 @@ def run_strategy(config: dict):
+         
+         print("📈 3/4 生成预测信号...")
+         rec = R.get_recorder()
++        
++        # 保存模型（方便后续加载）
++        rec.save_objects(trained_model=model)
++        
+         sr = SignalRecord(model, dataset, rec)
+         sr.generate()
+         
+diff --git a/scripts/update_daily_data.py b/scripts/update_daily_data.py
+index c01e868..2f92cd7 100644
+--- a/scripts/update_daily_data.py
++++ b/scripts/update_daily_data.py
+@@ -1,264 +1,244 @@
+ #!/usr/bin/env python3
+ """
+-增量更新 qlib 数据：从 adata 拉最新行情，直接 append 到 qlib bin
+-前提：已有历史数据（从 investment_data release 下载的 tar 包解压）
++更新 qlib 数据：从 investment_data GitHub releases 下载最新数据
++支持全量更新，自动下载、解压并覆盖到 qlib_data/cn_data
+ 每天: python update_daily_data.py
+ """
+ 
+ import time
+ import argparse
+-import numpy as np
+-import pandas as pd
++import tarfile
++import requests
++import shutil
+ from pathlib import Path
+-from datetime import datetime, timedelta
+ 
+ # ============ 配置 ============
+ DEFAULT_QLIB_DIR = Path.home() / "GolandProjects/stock/qlib_data/cn_data"
+-
+-INDEX_MAP = {
+-    "csi300":  ("csi300.txt",  "000300"),
+-    "csi500":  ("csi500.txt",  "000905"),
+-    "csi800":  ("csi800.txt",  "000906"),
+-    "csi1000": ("csi1000.txt", "000852"),
+-    "csiall":  ("csiall.txt",  "000985"),
+-}
+-
+-FEATURE_MAP = [
+-    ("open",   "price.open",   np.float32),
+-    ("close",  "price.close",  np.float32),
+-    ("high",   "price.high",   np.float32),
+-    ("low",    "price.low",    np.float32),
+-    ("volume", "volume",       np.float32),
+-]
++GITHUB_REPO = "chenditc/investment_data"
++DOWNLOAD_DIR = Path.home() / "GolandProjects/stock/.cache"
+ 
+ 
+ # ================================================================
+ #  工具函数
+ # ================================================================
+ def load_calendar(qlib_dir):
+-    cal_file = Path(qlib_dir) / "calendars" / "day.txt"
++    """读取 calendar 文件"""
++    cal_file = Path(qlib_dir).expanduser() / "calendars" / "day.txt"
+     if not cal_file.exists():
+-        raise FileNotFoundError(f"找不到 calendar: {cal_file}，请先解压历史数据")
++        return [], {}
+     dates = [line.strip() for line in cal_file.read_text().strip().split("\n") if line.strip()]
+     return dates, {d: i for i, d in enumerate(dates)}
+ 
+ 
+-def save_calendar(qlib_dir, dates):
+-    cal_file = Path(qlib_dir) / "calendars" / "day.txt"
+-    with open(cal_file, "w") as f:
+-        for d in dates:
+-            f.write(d + "\n")
+-
+-
+-def load_bin(qlib_dir, symbol, bin_name, dtype=np.float32):
+-    bin_path = Path(qlib_dir) / "features" / symbol / f"{bin_name}.bin"
+-    if not bin_path.exists():
+-        return None
+-    return np.fromfile(bin_path, dtype=dtype)
+-
+-
+-def save_bin(qlib_dir, symbol, bin_name, arr):
+-    bin_path = Path(qlib_dir) / "features" / symbol / f"{bin_name}.bin"
+-    bin_path.parent.mkdir(parents=True, exist_ok=True)
+-    arr.tofile(bin_path)
+-
+-
+-def get_symbol_stocks(index_code="000852"):
+-    import adata
+-    df = adata.stock.info.index_constituent(index_code=index_code)
+-    stocks = []
+-    for _, row in df.iterrows():
+-        code = str(row.iloc[0])
+-        if len(code) == 6:
+-            prefix = "SH" if code.startswith("6") else "SZ"
+-            stocks.append(f"{prefix}{code}")
+-    return stocks
+-
+-
+-def get_date_range(qlib_dir, symbol):
+-    dates, _ = load_calendar(qlib_dir)
+-    if not dates:
+-        return None, None
+-    bin_path = Path(qlib_dir) / "features" / symbol / "price.close.bin"
+-    if not bin_path.exists():
+-        return None, None
+-    arr = np.fromfile(bin_path, dtype=np.float32)
+-    if len(arr) == 0:
+-        return None, None
+-    valid = ~np.isnan(arr)
+-    if not valid.any():
+-        return None, None
+-    start_idx = np.argmax(valid)
+-    end_idx = len(valid) - 1 - np.argmax(valid[::-1])
+-    return dates[start_idx], dates[end_idx]
+-
+-
+ # ================================================================
+-#  增量更新
++#  从 GitHub releases 下载数据
+ # ================================================================
+-def incremental_update(qlib_dir, stock_list):
+-    import adata
+-
+-    qlib_dir = Path(qlib_dir)
+-
+-    # 1. 读现有 calendar，确定要拉的起始日期
+-    calendar, _ = load_calendar(qlib_dir)
+-    last_date = calendar[-1]
+-    next_date = (pd.Timestamp(last_date) + timedelta(days=1)).strftime("%Y-%m-%d")
+-    today = datetime.now().strftime("%Y-%m-%d")
+-
+-    if pd.Timestamp(next_date) > pd.Timestamp(today):
+-        print(f"  数据已是最新 (最后交易日: {last_date})")
+-        return last_date
+-
+-    print(f"  最后交易日: {last_date}，拉取 {next_date} ~ {today}")
+-
+-    # 2. 逐股票拉增量
+-    new_data = {}  # date -> {symbol: {col: value}}
+-    total = len(stock_list)
+-    errors = []
+-
+-    for i, symbol in enumerate(stock_list):
+-        code = symbol[2:]
+-        try:
+-            df = adata.stock.market.get_market(
+-                stock_code=code, k_type=1, start_date=next_date
+-            )
+-            if df is None or len(df) == 0:
+-                continue
+-
+-            if "trade_time" in df.columns and "trade_date" not in df.columns:
+-                df = df.rename(columns={"trade_time": "trade_date"})
+-            df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.strftime("%Y-%m-%d")
+-
+-            for _, row in df.iterrows():
+-                date = row["trade_date"]
+-                if date not in new_data:
+-                    new_data[date] = {}
+-                new_data[date][symbol] = {
+-                    "open":   float(row.get("open", np.nan)),
+-                    "close":  float(row.get("close", np.nan)),
+-                    "high":   float(row.get("high", np.nan)),
+-                    "low":    float(row.get("low", np.nan)),
+-                    "volume": float(row.get("volume", np.nan)),
+-                }
+-        except Exception as e:
+-            errors.append((symbol, str(e)))
+-
+-        if (i + 1) % 200 == 0:
+-            print(f"    进度: {i+1}/{total} | 新增 {len(new_data)} 个交易日")
+-            time.sleep(2)
+-
+-    if errors:
+-        print(f"  ⚠ {len(errors)} 只拉取失败")
+-        for sym, err in errors[:5]:
+-            print(f"    {sym}: {err}")
+-
+-    if not new_data:
+-        print("  没有新数据")
+-        return last_date
+-
+-    # 3. 追加到 bin
+-    new_dates = sorted(new_data.keys())
+-    print(f"  新增交易日: {new_dates}")
+-
+-    calendar.extend(new_dates)
+-    save_calendar(qlib_dir, calendar)
+-
+-    for symbol in stock_list:
+-        for col_name, bin_name, dtype in FEATURE_MAP:
+-            old_arr = load_bin(qlib_dir, symbol, bin_name, dtype)
+-            if old_arr is None:
+-                old_arr = np.full(len(calendar) - len(new_dates), np.nan, dtype=dtype)
+-
+-            new_arr = np.full(len(new_dates), np.nan, dtype=dtype)
+-            for j, date in enumerate(new_dates):
+-                if date in new_data and symbol in new_data[date]:
+-                    new_arr[j] = dtype(new_data[date][symbol].get(col_name, np.nan))
+-
+-            full_arr = np.concatenate([old_arr, new_arr])
+-            save_bin(qlib_dir, symbol, bin_name, full_arr)
+-
+-    latest = new_dates[-1]
+-    print(f"  ✅ 更新完成，最新交易日: {latest}")
+-    return latest
+-
+-
+-# ================================================================
+-#  更新 instruments
+-# ================================================================
+-def update_instruments(qlib_dir, stock_list):
+-    qlib_dir = Path(qlib_dir)
+-    instruments_dir = qlib_dir / "instruments"
+-    instruments_dir.mkdir(parents=True, exist_ok=True)
+-
+-    # all.txt
+-    all_lines = []
+-    for symbol in stock_list:
+-        start, end = get_date_range(qlib_dir, symbol)
+-        if start and end:
+-            all_lines.append(f"{symbol}\t{start}\t{end}")
++def get_latest_release_info():
++    """获取最新 release 的信息"""
++    url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
++    print(f"📡 检查最新 release...")
++    
++    try:
++        response = requests.get(url, timeout=10)
++        response.raise_for_status()
++        data = response.json()
++        
++        tag_name = data["tag_name"]
++        assets = data.get("assets", [])
++        
++        # 查找 qlib_bin.tar.gz 文件
++        download_url = None
++        for asset in assets:
++            if "qlib_bin.tar.gz" in asset["name"]:
++                download_url = asset["browser_download_url"]
++                break
++        
++        if not download_url:
++            print("❌ 未找到 qlib_bin.tar.gz 文件")
++            return None, None
++        
++        print(f"✅ 最新版本: {tag_name}")
++        return tag_name, download_url
++    
++    except Exception as e:
++        print(f"❌ 获取 release 信息失败: {e}")
++        return None, None
+ 
+-    with open(instruments_dir / "all.txt", "w") as f:
+-        f.write("\n".join(all_lines) + "\n")
+-    print(f"  all.txt: {len(all_lines)} 只")
+ 
+-    # 各指数
+-    import adata
+-    for name, (filename, index_code) in INDEX_MAP.items():
+-        try:
+-            df = adata.stock.info.index_constituent(index_code=index_code)
+-        except Exception as e:
+-            print(f"  ⚠ {name}({index_code}): {e}")
+-            continue
++def download_file(url, save_path):
++    """下载文件并显示进度"""
++    print(f"⬇️  开始下载...")
++    print(f"    URL: {url}")
++    
++    try:
++        response = requests.get(url, stream=True, timeout=30)
++        response.raise_for_status()
++        
++        total_size = int(response.headers.get('content-length', 0))
++        save_path.parent.mkdir(parents=True, exist_ok=True)
++        
++        with open(save_path, 'wb') as f:
++            downloaded = 0
++            start_time = time.time()
++            last_print = 0
++            
++            for chunk in response.iter_content(chunk_size=8192):
++                if chunk:
++                    f.write(chunk)
++                    downloaded += len(chunk)
++                    
++                    # 每 10MB 显示一次进度
++                    if downloaded - last_print >= 10 * 1024 * 1024 or downloaded == total_size:
++                        percent = downloaded / total_size * 100 if total_size > 0 else 0
++                        speed = downloaded / (time.time() - start_time) / 1024 / 1024
++                        print(f"    进度: {percent:.1f}% ({downloaded / 1024 / 1024:.1f}MB / {total_size / 1024 / 1024:.1f}MB) - {speed:.2f}MB/s")
++                        last_print = downloaded
++        
++        print(f"✅ 下载完成: {save_path}")
++        return True
++    
++    except Exception as e:
++        print(f"❌ 下载失败: {e}")
++        if save_path.exists():
++            save_path.unlink()
++        return False
++
++
++def extract_tar_gz(tar_path, extract_to):
++    """解压 tar.gz 文件"""
++    print(f"📦 解压中...")
++    
++    try:
++        extract_to.mkdir(parents=True, exist_ok=True)
++        
++        with tarfile.open(tar_path, 'r:gz') as tar:
++            # 获取解压后的根目录名（通常是 qlib_bin）
++            members = tar.getmembers()
++            if not members:
++                print("❌ 压缩包为空")
++                return None
++            
++            # 提取根目录名
++            root_dir = members[0].name.split('/')[0]
++            print(f"    根目录: {root_dir}")
++            
++            # 解压所有文件
++            tar.extractall(extract_to)
++            
++            print(f"✅ 解压完成")
++            return extract_to / root_dir
++    
++    except Exception as e:
++        print(f"❌ 解压失败: {e}")
++        return None
+ 
+-        lines = []
+-        for _, row in df.iterrows():
+-            code = str(row.iloc[0])
+-            if len(code) != 6:
+-                continue
+-            prefix = "SH" if code.startswith("6") else "SZ"
+-            symbol = f"{prefix}{code}"
+-            start, end = get_date_range(qlib_dir, symbol)
+-            if not start:
+-                start = "2000-01-01"
+-                end = datetime.now().strftime("%Y-%m-%d")
+-            lines.append(f"{symbol}\t{start}\t{end}")
+ 
+-        with open(instruments_dir / filename, "w") as f:
+-            f.write("\n".join(lines) + "\n")
+-        print(f"  {filename}: {len(lines)} 只")
++def sync_data(source_dir, target_dir):
++    """同步数据：将 source_dir 的内容覆盖到 target_dir"""
++    print(f"🔄 同步数据...")
++    print(f"    源目录: {source_dir}")
++    print(f"    目标目录: {target_dir}")
++    
++    try:
++        # 确保目标目录存在
++        target_dir.mkdir(parents=True, exist_ok=True)
++        
++        # 复制所有内容
++        for item in source_dir.iterdir():
++            target_item = target_dir / item.name
++            
++            if item.is_dir():
++                if target_item.exists():
++                    shutil.rmtree(target_item)
++                shutil.copytree(item, target_item)
++                print(f"      📁 {item.name}/")
++            else:
++                shutil.copy2(item, target_item)
++                print(f"      📄 {item.name}")
++        
++        print(f"✅ 同步完成")
++        return True
++    
++    except Exception as e:
++        print(f"❌ 同步失败: {e}")
++        return False
++
++
++def download_and_update(qlib_dir):
++    """下载最新数据并更新"""
++    qlib_dir = Path(qlib_dir).expanduser()
++    
++    # 1. 获取最新 release
++    tag_name, download_url = get_latest_release_info()
++    if not download_url:
++        return False
++    
++    # 2. 下载到临时目录
++    DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
++    download_file_path = DOWNLOAD_DIR / "qlib_bin.tar.gz"
++    
++    if not download_file(download_url, download_file_path):
++        return False
++    
++    # 3. 解压
++    extract_dir = DOWNLOAD_DIR / "extract"
++    extracted_path = extract_tar_gz(download_file_path, extract_dir)
++    if not extracted_path:
++        return False
++    
++    # 4. 同步到 qlib_dir
++    if not sync_data(extracted_path, qlib_dir):
++        return False
++    
++    # 5. 清理所有临时文件
++    print("🧹 清理临时文件...")
++    if DOWNLOAD_DIR.exists():
++        shutil.rmtree(DOWNLOAD_DIR)
++    
++    print(f"\n✅ 数据更新完成！")
++    return True
+ 
+ 
+ # ================================================================
+ #  入口
+ # ================================================================
+ def update_daily(qlib_dir=None):
+-    qlib_dir = Path(qlib_dir) if qlib_dir else DEFAULT_QLIB_DIR
+-    print(f"📁 qlib: {qlib_dir}")
+-
+-    print("\n[1/3] 获取成分股...")
+-    stock_list = get_symbol_stocks("000852")
+-    print(f"  共 {len(stock_list)} 只")
+-
+-    print("\n[2/3] 增量拉取行情 → 写入 bin...")
+-    latest_date = incremental_update(qlib_dir, stock_list)
+-
+-    print("\n[3/3] 更新 instruments...")
+-    update_instruments(qlib_dir, stock_list)
+-
+-    print(f"\n✅ 最新交易日: {latest_date}")
+-    return latest_date
++    """
++    从 GitHub releases 下载最新数据并更新
++    qlib_dir: qlib 数据目录
++    """
++    qlib_dir = Path(qlib_dir).expanduser() if qlib_dir else DEFAULT_QLIB_DIR
++    print("=" * 60)
++    print("📦 从 GitHub 下载最新 qlib 数据")
++    print("=" * 60)
++    print(f"📁 目标目录: {qlib_dir}\n")
++    
++    success = download_and_update(qlib_dir)
++    
++    if not success:
++        print("\n❌ 更新失败")
++        return None
++    
++    # 读取最新日期
++    calendar, _ = load_calendar(qlib_dir)
++    if calendar:
++        latest_date = calendar[-1]
++        print(f"\n✅ 最新交易日: {latest_date}")
++        return latest_date
++    else:
++        print("\n⚠ 无法读取 calendar")
++        return None
+ 
+ 
+ def main():
+-    parser = argparse.ArgumentParser()
+-    parser.add_argument("--qlib-dir", default=str(DEFAULT_QLIB_DIR))
++    parser = argparse.ArgumentParser(description="从 GitHub 下载最新 qlib 数据")
++    parser.add_argument("--qlib-dir", default=str(DEFAULT_QLIB_DIR), 
++                        help="qlib 数据目录")
+     args = parser.parse_args()
+ 
+     latest = update_daily(qlib_dir=args.qlib_dir)
+     if latest:
+-        print(f"💡 config.yaml end_time 应为: {latest}")
++        print(f"\n💡 config.yaml end_time 应设置为: {latest}")
+ 
+ 
+ if __name__ == "__main__":

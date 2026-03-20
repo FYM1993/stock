@@ -90,6 +90,10 @@ def run_strategy(config: dict):
         
         print("📈 3/4 生成预测信号...")
         rec = R.get_recorder()
+        
+        # 保存模型（方便后续加载）
+        rec.save_objects(trained_model=model)
+        
         sr = SignalRecord(model, dataset, rec)
         sr.generate()
         

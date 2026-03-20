@@ -1,0 +1,6 @@
+artifact_location: file:///Users/yimin.fu/GolandProjects/stock/mlruns/107646498220244737
+creation_time: 1774014630205
+experiment_id: '107646498220244737'
+last_update_time: 1774014630205
+lifecycle_stage: active
+name: load_model

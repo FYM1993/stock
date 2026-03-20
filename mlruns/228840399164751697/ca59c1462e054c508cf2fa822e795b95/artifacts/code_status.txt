@@ -1,0 +1,42 @@
+位于分支 main
+您的分支与上游分支 'origin/main' 一致。
+
+尚未暂存以备提交的变更：
+  （使用 "git add/rm <文件>..." 更新要提交的内容）
+  （使用 "git restore <文件>..." 丢弃工作区的改动）
+	修改：     config.yaml
+	删除：     mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_cached.txt
+	删除：     mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_diff.txt
+	删除：     mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/artifacts/code_status.txt
+	删除：     mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/meta.yaml
+	删除：     mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/params/cmd-sys.argv
+	删除：     mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.runName
+	删除：     mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.git.commit
+	删除：     mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.name
+	删除：     mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.source.type
+	删除：     mlruns/215440135751376164/4452cecf82594684ae5e0892f9a829b2/tags/mlflow.user
+	删除：     mlruns/215440135751376164/meta.yaml
+	删除：     mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_cached.txt
+	删除：     mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_diff.txt
+	删除：     mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/artifacts/code_status.txt
+	删除：     mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/meta.yaml
+	删除：     mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/params/cmd-sys.argv
+	删除：     mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.runName
+	删除：     mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.git.commit
+	删除：     mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.name
+	删除：     mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.source.type
+	删除：     mlruns/661605342228750048/887d0b7e13114b9a896c3fef84c6c311/tags/mlflow.user
+	删除：     mlruns/661605342228750048/meta.yaml
+	修改：     scripts/__init__.py
+	修改：     scripts/daily_signal.py
+	修改：     scripts/run_strategy.py
+	修改：     scripts/update_daily_data.py
+
+未跟踪的文件:
+  （使用 "git add <文件>..." 以包含要提交的内容）
+	mlruns/228840399164751697/
+	mlruns/251827245560618622/
+	mlruns/542627729466415497/
+	mlruns/745121295727252040/
+
+修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）

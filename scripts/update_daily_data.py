@@ -1,264 +1,244 @@
 #!/usr/bin/env python3
 """
-增量更新 qlib 数据：从 adata 拉最新行情，直接 append 到 qlib bin
-前提：已有历史数据（从 investment_data release 下载的 tar 包解压）
+更新 qlib 数据：从 investment_data GitHub releases 下载最新数据
+支持全量更新，自动下载、解压并覆盖到 qlib_data/cn_data
 每天: python update_daily_data.py
 """
 
 import time
 import argparse
-import numpy as np
-import pandas as pd
+import tarfile
+import requests
+import shutil
 from pathlib import Path
-from datetime import datetime, timedelta
 
 # ============ 配置 ============
 DEFAULT_QLIB_DIR = Path.home() / "GolandProjects/stock/qlib_data/cn_data"
-
-INDEX_MAP = {
-    "csi300":  ("csi300.txt",  "000300"),
-    "csi500":  ("csi500.txt",  "000905"),
-    "csi800":  ("csi800.txt",  "000906"),
-    "csi1000": ("csi1000.txt", "000852"),
-    "csiall":  ("csiall.txt",  "000985"),
-}
-
-FEATURE_MAP = [
-    ("open",   "price.open",   np.float32),
-    ("close",  "price.close",  np.float32),
-    ("high",   "price.high",   np.float32),
-    ("low",    "price.low",    np.float32),
-    ("volume", "volume",       np.float32),
-]
+GITHUB_REPO = "chenditc/investment_data"
+DOWNLOAD_DIR = Path.home() / "GolandProjects/stock/.cache"
 
 
 # ================================================================
 #  工具函数
 # ================================================================
 def load_calendar(qlib_dir):
-    cal_file = Path(qlib_dir) / "calendars" / "day.txt"
+    """读取 calendar 文件"""
+    cal_file = Path(qlib_dir).expanduser() / "calendars" / "day.txt"
     if not cal_file.exists():
-        raise FileNotFoundError(f"找不到 calendar: {cal_file}，请先解压历史数据")
+        return [], {}
     dates = [line.strip() for line in cal_file.read_text().strip().split("\n") if line.strip()]
     return dates, {d: i for i, d in enumerate(dates)}
 
 
-def save_calendar(qlib_dir, dates):
-    cal_file = Path(qlib_dir) / "calendars" / "day.txt"
-    with open(cal_file, "w") as f:
-        for d in dates:
-            f.write(d + "\n")
+# ================================================================
+#  从 GitHub releases 下载数据
+# ================================================================
+def get_latest_release_info():
+    """获取最新 release 的信息"""
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+    print(f"📡 检查最新 release...")
+    
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        tag_name = data["tag_name"]
+        assets = data.get("assets", [])
+        
+        # 查找 qlib_bin.tar.gz 文件
+        download_url = None
+        for asset in assets:
+            if "qlib_bin.tar.gz" in asset["name"]:
+                download_url = asset["browser_download_url"]
+                break
+        
+        if not download_url:
+            print("❌ 未找到 qlib_bin.tar.gz 文件")
+            return None, None
+        
+        print(f"✅ 最新版本: {tag_name}")
+        return tag_name, download_url
+    
+    except Exception as e:
+        print(f"❌ 获取 release 信息失败: {e}")
+        return None, None
 
 
-def load_bin(qlib_dir, symbol, bin_name, dtype=np.float32):
-    bin_path = Path(qlib_dir) / "features" / symbol / f"{bin_name}.bin"
-    if not bin_path.exists():
+def download_file(url, save_path):
+    """下载文件并显示进度"""
+    print(f"⬇️  开始下载...")
+    print(f"    URL: {url}")
+    
+    try:
+        response = requests.get(url, stream=True, timeout=30)
+        response.raise_for_status()
+        
+        total_size = int(response.headers.get('content-length', 0))
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(save_path, 'wb') as f:
+            downloaded = 0
+            start_time = time.time()
+            last_print = 0
+            
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    
+                    # 每 10MB 显示一次进度
+                    if downloaded - last_print >= 10 * 1024 * 1024 or downloaded == total_size:
+                        percent = downloaded / total_size * 100 if total_size > 0 else 0
+                        speed = downloaded / (time.time() - start_time) / 1024 / 1024
+                        print(f"    进度: {percent:.1f}% ({downloaded / 1024 / 1024:.1f}MB / {total_size / 1024 / 1024:.1f}MB) - {speed:.2f}MB/s")
+                        last_print = downloaded
+        
+        print(f"✅ 下载完成: {save_path}")
+        return True
+    
+    except Exception as e:
+        print(f"❌ 下载失败: {e}")
+        if save_path.exists():
+            save_path.unlink()
+        return False
+
+
+def extract_tar_gz(tar_path, extract_to):
+    """解压 tar.gz 文件"""
+    print(f"📦 解压中...")
+    
+    try:
+        extract_to.mkdir(parents=True, exist_ok=True)
+        
+        with tarfile.open(tar_path, 'r:gz') as tar:
+            # 获取解压后的根目录名（通常是 qlib_bin）
+            members = tar.getmembers()
+            if not members:
+                print("❌ 压缩包为空")
+                return None
+            
+            # 提取根目录名
+            root_dir = members[0].name.split('/')[0]
+            print(f"    根目录: {root_dir}")
+            
+            # 解压所有文件
+            tar.extractall(extract_to)
+            
+            print(f"✅ 解压完成")
+            return extract_to / root_dir
+    
+    except Exception as e:
+        print(f"❌ 解压失败: {e}")
         return None
-    return np.fromfile(bin_path, dtype=dtype)
 
 
-def save_bin(qlib_dir, symbol, bin_name, arr):
-    bin_path = Path(qlib_dir) / "features" / symbol / f"{bin_name}.bin"
-    bin_path.parent.mkdir(parents=True, exist_ok=True)
-    arr.tofile(bin_path)
+def sync_data(source_dir, target_dir):
+    """同步数据：将 source_dir 的内容覆盖到 target_dir"""
+    print(f"🔄 同步数据...")
+    print(f"    源目录: {source_dir}")
+    print(f"    目标目录: {target_dir}")
+    
+    try:
+        # 确保目标目录存在
+        target_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 复制所有内容
+        for item in source_dir.iterdir():
+            target_item = target_dir / item.name
+            
+            if item.is_dir():
+                if target_item.exists():
+                    shutil.rmtree(target_item)
+                shutil.copytree(item, target_item)
+                print(f"      📁 {item.name}/")
+            else:
+                shutil.copy2(item, target_item)
+                print(f"      📄 {item.name}")
+        
+        print(f"✅ 同步完成")
+        return True
+    
+    except Exception as e:
+        print(f"❌ 同步失败: {e}")
+        return False
 
 
-def get_symbol_stocks(index_code="000852"):
-    import adata
-    df = adata.stock.info.index_constituent(index_code=index_code)
-    stocks = []
-    for _, row in df.iterrows():
-        code = str(row.iloc[0])
-        if len(code) == 6:
-            prefix = "SH" if code.startswith("6") else "SZ"
-            stocks.append(f"{prefix}{code}")
-    return stocks
-
-
-def get_date_range(qlib_dir, symbol):
-    dates, _ = load_calendar(qlib_dir)
-    if not dates:
-        return None, None
-    bin_path = Path(qlib_dir) / "features" / symbol / "price.close.bin"
-    if not bin_path.exists():
-        return None, None
-    arr = np.fromfile(bin_path, dtype=np.float32)
-    if len(arr) == 0:
-        return None, None
-    valid = ~np.isnan(arr)
-    if not valid.any():
-        return None, None
-    start_idx = np.argmax(valid)
-    end_idx = len(valid) - 1 - np.argmax(valid[::-1])
-    return dates[start_idx], dates[end_idx]
-
-
-# ================================================================
-#  增量更新
-# ================================================================
-def incremental_update(qlib_dir, stock_list):
-    import adata
-
-    qlib_dir = Path(qlib_dir)
-
-    # 1. 读现有 calendar，确定要拉的起始日期
-    calendar, _ = load_calendar(qlib_dir)
-    last_date = calendar[-1]
-    next_date = (pd.Timestamp(last_date) + timedelta(days=1)).strftime("%Y-%m-%d")
-    today = datetime.now().strftime("%Y-%m-%d")
-
-    if pd.Timestamp(next_date) > pd.Timestamp(today):
-        print(f"  数据已是最新 (最后交易日: {last_date})")
-        return last_date
-
-    print(f"  最后交易日: {last_date}，拉取 {next_date} ~ {today}")
-
-    # 2. 逐股票拉增量
-    new_data = {}  # date -> {symbol: {col: value}}
-    total = len(stock_list)
-    errors = []
-
-    for i, symbol in enumerate(stock_list):
-        code = symbol[2:]
-        try:
-            df = adata.stock.market.get_market(
-                stock_code=code, k_type=1, start_date=next_date
-            )
-            if df is None or len(df) == 0:
-                continue
-
-            if "trade_time" in df.columns and "trade_date" not in df.columns:
-                df = df.rename(columns={"trade_time": "trade_date"})
-            df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.strftime("%Y-%m-%d")
-
-            for _, row in df.iterrows():
-                date = row["trade_date"]
-                if date not in new_data:
-                    new_data[date] = {}
-                new_data[date][symbol] = {
-                    "open":   float(row.get("open", np.nan)),
-                    "close":  float(row.get("close", np.nan)),
-                    "high":   float(row.get("high", np.nan)),
-                    "low":    float(row.get("low", np.nan)),
-                    "volume": float(row.get("volume", np.nan)),
-                }
-        except Exception as e:
-            errors.append((symbol, str(e)))
-
-        if (i + 1) % 200 == 0:
-            print(f"    进度: {i+1}/{total} | 新增 {len(new_data)} 个交易日")
-            time.sleep(2)
-
-    if errors:
-        print(f"  ⚠ {len(errors)} 只拉取失败")
-        for sym, err in errors[:5]:
-            print(f"    {sym}: {err}")
-
-    if not new_data:
-        print("  没有新数据")
-        return last_date
-
-    # 3. 追加到 bin
-    new_dates = sorted(new_data.keys())
-    print(f"  新增交易日: {new_dates}")
-
-    calendar.extend(new_dates)
-    save_calendar(qlib_dir, calendar)
-
-    for symbol in stock_list:
-        for col_name, bin_name, dtype in FEATURE_MAP:
-            old_arr = load_bin(qlib_dir, symbol, bin_name, dtype)
-            if old_arr is None:
-                old_arr = np.full(len(calendar) - len(new_dates), np.nan, dtype=dtype)
-
-            new_arr = np.full(len(new_dates), np.nan, dtype=dtype)
-            for j, date in enumerate(new_dates):
-                if date in new_data and symbol in new_data[date]:
-                    new_arr[j] = dtype(new_data[date][symbol].get(col_name, np.nan))
-
-            full_arr = np.concatenate([old_arr, new_arr])
-            save_bin(qlib_dir, symbol, bin_name, full_arr)
-
-    latest = new_dates[-1]
-    print(f"  ✅ 更新完成，最新交易日: {latest}")
-    return latest
-
-
-# ================================================================
-#  更新 instruments
-# ================================================================
-def update_instruments(qlib_dir, stock_list):
-    qlib_dir = Path(qlib_dir)
-    instruments_dir = qlib_dir / "instruments"
-    instruments_dir.mkdir(parents=True, exist_ok=True)
-
-    # all.txt
-    all_lines = []
-    for symbol in stock_list:
-        start, end = get_date_range(qlib_dir, symbol)
-        if start and end:
-            all_lines.append(f"{symbol}\t{start}\t{end}")
-
-    with open(instruments_dir / "all.txt", "w") as f:
-        f.write("\n".join(all_lines) + "\n")
-    print(f"  all.txt: {len(all_lines)} 只")
-
-    # 各指数
-    import adata
-    for name, (filename, index_code) in INDEX_MAP.items():
-        try:
-            df = adata.stock.info.index_constituent(index_code=index_code)
-        except Exception as e:
-            print(f"  ⚠ {name}({index_code}): {e}")
-            continue
-
-        lines = []
-        for _, row in df.iterrows():
-            code = str(row.iloc[0])
-            if len(code) != 6:
-                continue
-            prefix = "SH" if code.startswith("6") else "SZ"
-            symbol = f"{prefix}{code}"
-            start, end = get_date_range(qlib_dir, symbol)
-            if not start:
-                start = "2000-01-01"
-                end = datetime.now().strftime("%Y-%m-%d")
-            lines.append(f"{symbol}\t{start}\t{end}")
-
-        with open(instruments_dir / filename, "w") as f:
-            f.write("\n".join(lines) + "\n")
-        print(f"  {filename}: {len(lines)} 只")
+def download_and_update(qlib_dir):
+    """下载最新数据并更新"""
+    qlib_dir = Path(qlib_dir).expanduser()
+    
+    # 1. 获取最新 release
+    tag_name, download_url = get_latest_release_info()
+    if not download_url:
+        return False
+    
+    # 2. 下载到临时目录
+    DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    download_file_path = DOWNLOAD_DIR / "qlib_bin.tar.gz"
+    
+    if not download_file(download_url, download_file_path):
+        return False
+    
+    # 3. 解压
+    extract_dir = DOWNLOAD_DIR / "extract"
+    extracted_path = extract_tar_gz(download_file_path, extract_dir)
+    if not extracted_path:
+        return False
+    
+    # 4. 同步到 qlib_dir
+    if not sync_data(extracted_path, qlib_dir):
+        return False
+    
+    # 5. 清理所有临时文件
+    print("🧹 清理临时文件...")
+    if DOWNLOAD_DIR.exists():
+        shutil.rmtree(DOWNLOAD_DIR)
+    
+    print(f"\n✅ 数据更新完成！")
+    return True
 
 
 # ================================================================
 #  入口
 # ================================================================
 def update_daily(qlib_dir=None):
-    qlib_dir = Path(qlib_dir) if qlib_dir else DEFAULT_QLIB_DIR
-    print(f"📁 qlib: {qlib_dir}")
-
-    print("\n[1/3] 获取成分股...")
-    stock_list = get_symbol_stocks("000852")
-    print(f"  共 {len(stock_list)} 只")
-
-    print("\n[2/3] 增量拉取行情 → 写入 bin...")
-    latest_date = incremental_update(qlib_dir, stock_list)
-
-    print("\n[3/3] 更新 instruments...")
-    update_instruments(qlib_dir, stock_list)
-
-    print(f"\n✅ 最新交易日: {latest_date}")
-    return latest_date
+    """
+    从 GitHub releases 下载最新数据并更新
+    qlib_dir: qlib 数据目录
+    """
+    qlib_dir = Path(qlib_dir).expanduser() if qlib_dir else DEFAULT_QLIB_DIR
+    print("=" * 60)
+    print("📦 从 GitHub 下载最新 qlib 数据")
+    print("=" * 60)
+    print(f"📁 目标目录: {qlib_dir}\n")
+    
+    success = download_and_update(qlib_dir)
+    
+    if not success:
+        print("\n❌ 更新失败")
+        return None
+    
+    # 读取最新日期
+    calendar, _ = load_calendar(qlib_dir)
+    if calendar:
+        latest_date = calendar[-1]
+        print(f"\n✅ 最新交易日: {latest_date}")
+        return latest_date
+    else:
+        print("\n⚠ 无法读取 calendar")
+        return None
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--qlib-dir", default=str(DEFAULT_QLIB_DIR))
+    parser = argparse.ArgumentParser(description="从 GitHub 下载最新 qlib 数据")
+    parser.add_argument("--qlib-dir", default=str(DEFAULT_QLIB_DIR), 
+                        help="qlib 数据目录")
     args = parser.parse_args()
 
     latest = update_daily(qlib_dir=args.qlib_dir)
     if latest:
-        print(f"💡 config.yaml end_time 应为: {latest}")
+        print(f"\n💡 config.yaml end_time 应设置为: {latest}")
 
 
 if __name__ == "__main__":

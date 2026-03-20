@@ -14,7 +14,7 @@ qlib_init:
 #   - csi1000: 中证1000（小盘股）
 #   - all: 全市场所有股票
 #   - all_except_688_BJ: 全市场所有股票，不包括科创板和北交所
-market: "all_except_688_BJ"
+market: "csi300"
 
 # benchmark: 基准指数，用于计算超额收益
 #   - SH000300: 沪深300指数
@@ -78,10 +78,10 @@ dataset:
         #   - 例如：RobustZScoreNorm需要计算每个特征的均值和标准差
         #   - 重要：只能用训练集数据，否则会产生数据泄漏（look-ahead bias）
         #   - 通常设置为训练集的时间范围
-        fit_start_time: "2018-01-01"   # 训练集开始
+        fit_start_time: "2015-01-01"   # 训练集开始
         fit_end_time: "2023-12-31"     # 训练集结束
         
-        instruments: "all_except_688_BJ"          # 股票池（需与上面market保持一致）
+        instruments: "csi300"          # 股票池（需与上面market保持一致）
         
         # 推理时的数据处理（用于预测）
         infer_processors:
@@ -104,7 +104,7 @@ dataset:
     
     # 数据集划分
     segments:
-      train: ["2018-01-01", "2023-12-31"]  # 训练集
+      train: ["2015-01-01", "2023-12-31"]  # 训练集
       valid: ["2024-01-01", "2024-12-31"]  # 验证集
       test:  ["2025-01-01", "2026-03-19"]  # 至少1年
 
