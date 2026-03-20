@@ -9,8 +9,8 @@
 配置方式（config.yaml）:
 
   strategy:
-    class: "scripts.periodic_topk_strategy.PeriodicTopkStrategy"
-    module_path: "scripts.periodic_topk_strategy"
+    class: "PeriodicTopkStrategy"
+    module_path: "periodic_topk_strategy"
     kwargs:
       signal: "<PRED>"
       topk: 30

@@ -13,13 +13,14 @@ qlib_init:
 #   - csi800: 中证800（沪深300+中证500）
 #   - csi1000: 中证1000（小盘股）
 #   - all: 全市场所有股票
-market: "csi1000"
+#   - all_except_688_BJ: 全市场所有股票，不包括科创板和北交所
+market: "all_except_688_BJ"
 
 # benchmark: 基准指数，用于计算超额收益
 #   - SH000300: 沪深300指数
 #   - SH000905: 中证500指数
 #   - SH000852: 中证1000指数
-benchmark: "SH000852"
+benchmark: "SH000300"
 
 # ==================== 模型配置 ====================
 model:
@@ -28,7 +29,7 @@ model:
   kwargs:
     # 集成模型参数
     base_model: "gbm"        # 底层模型：梯度提升机
-    epochs: 100              # 训练轮数
+    epochs: 50              # 训练轮数
     num_models: 5            # 训练数据分成5份（集成5个子模型）
     enable_sr: true          # 开启样本重加权
     enable_fs: true          # 开启特征选择
@@ -52,7 +53,7 @@ model:
     lambda_l2: 10                      # L2正则化系数
     
     # 性能参数
-    num_threads: 20                    # 并行线程数
+    num_threads: 8                    # 并行线程数
 
 # ==================== 数据集配置 ====================
 dataset:
@@ -78,9 +79,9 @@ dataset:
         #   - 重要：只能用训练集数据，否则会产生数据泄漏（look-ahead bias）
         #   - 通常设置为训练集的时间范围
         fit_start_time: "2018-01-01"   # 训练集开始
-        fit_end_time: "2024-12-31"     # 训练集结束
+        fit_end_time: "2023-12-31"     # 训练集结束
         
-        instruments: "csi1000"          # 股票池（需与上面market保持一致）
+        instruments: "all_except_688_BJ"          # 股票池（需与上面market保持一致）
         
         # 推理时的数据处理（用于预测）
         infer_processors:
@@ -103,26 +104,26 @@ dataset:
     
     # 数据集划分
     segments:
-      train: ["2018-01-01", "2024-12-31"]  # 训练集
+      train: ["2018-01-01", "2023-12-31"]  # 训练集
       valid: ["2024-01-01", "2024-12-31"]  # 验证集
-      test:  ["2025-01-01", "2025-12-31"]  # 至少1年
+      test:  ["2025-01-01", "2026-03-19"]  # 至少1年
 
 # ==================== 回测配置 ====================
 port_analysis_config:
   
   # 交易策略配置
   strategy:
-    class: "scripts.periodic_topk_strategy.PeriodicTopkStrategy"       # TopK策略：选择预测收益最高的K只股票
-    module_path: "scripts.periodic_topk_strategy"
+    class: "PeriodicTopkStrategy"       # 周期调仓策略
+    module_path: "periodic_topk_strategy"
     kwargs:
       signal: "<PRED>"                 # 使用模型预测值作为信号
       topk: 30                         # 持仓数量
-      n_drop: 5              # 每次调仓最多换5只（5天不动了，放宽到5）
-      hold_days: 5           # ★ 每5个交易日调仓一次，对齐5日标签
+      n_drop: 5                        # 每次调仓最多换5只
+      hold_days: 5                     # ★ 每x个交易日调仓一次
   
   # 回测引擎配置
   backtest:
-    start_time: "2026-01-01"           # 回测开始日期
+    start_time: "2025-01-01"           # 回测开始日期
     end_time: "2026-03-19"             # 回测结束日期
     account: 100000                    # 初始资金：10万元
     benchmark: "SH000300"              # 基准指数（用于计算超额收益）
@@ -135,7 +136,7 @@ port_analysis_config:
       limit_threshold: 0.095           # 涨跌停阈值：9.5%（A股涨跌停限制为10%，留0.5%缓冲）
       
       # 成交价格
-      deal_price: "close"              # 使用收盘价成交（也可选择"open", "vwap"等）
+      deal_price: "open"              #"open", "vwap", "close"
       
       # 交易成本
       open_cost: 0.0003                # 开仓手续费率：0.05%（券商佣金，一般为万分之5）

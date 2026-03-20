@@ -3,16 +3,16 @@
 每日交易信号生成器
 ==================
 
-每天运行一次，输出当天的买卖信号。
-基于已训练好的模型，对当前股票池生成预测排名。
-
-调仓间隔从 config.yaml 的 port_analysis_config.strategy.kwargs.hold_days 读取。
+职责：盘后运行，输出明天的候选股票池
+- 加载 run_strategy.py 训练好的模型
+- 增量更新数据
+- 纯推理，不做训练
 
 使用方式：
-    # 首次：需要先训练模型并保存
-    python scripts/daily_signal.py --train
+    # 第一步：先用 run_strategy.py 训练并回测，确认效果 OK
+    python scripts/run_strategy.py
 
-    # 每日运行（自动读取 config.yaml 中的调仓间隔）
+    # 第二步：每天盘后跑这个（会自动增量更新数据）
     python scripts/daily_signal.py
 """
 
@@ -21,157 +21,136 @@ import json
 import yaml
 import argparse
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import qlib
-from qlib.utils import init_instance_by_config
 from qlib.workflow import R
-from qlib.data import D
+from qlib.utils import init_instance_by_config
 
 
 # ============ 配置 ============
 CONFIG_PATH = "config.yaml"
-MODEL_SAVE_DIR = "models"
 PORTFOLIO_FILE = "portfolio.json"
 
 
-def load_config(config_path: str) -> dict:
-    with open(config_path, 'r', encoding='utf-8') as f:
+def load_config(config_path=CONFIG_PATH):
+    with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-def get_today_str():
-    """获取今天的日期字符串"""
-    return datetime.now().strftime("%Y-%m-%d")
-
-
-def load_portfolio(portfolio_file: str) -> dict:
-    """加载当前持仓"""
+def load_portfolio(portfolio_file=PORTFOLIO_FILE):
     pf_path = Path(portfolio_file)
     if pf_path.exists():
-        with open(pf_path, 'r', encoding='utf-8') as f:
+        with open(pf_path, "r", encoding="utf-8") as f:
             return json.load(f)
     return {"holdings": [], "cash": 100000, "updated": ""}
 
 
-def save_portfolio(portfolio_file: str, portfolio: dict):
-    """保存当前持仓"""
-    portfolio["updated"] = get_today_str()
-    with open(portfolio_file, 'w', encoding='utf-8') as f:
+def save_portfolio(portfolio, portfolio_file=PORTFOLIO_FILE):
+    portfolio["updated"] = datetime.now().strftime("%Y-%m-%d")
+    with open(portfolio_file, "w", encoding="utf-8") as f:
         json.dump(portfolio, f, ensure_ascii=False, indent=2)
 
 
-def train_and_save(config: dict):
-    """训练模型并保存"""
-    print("=" * 60)
-    print("🎯 训练模型并保存")
-    print("=" * 60)
-
-    qlib.init(**config["qlib_init"])
-
-    model = init_instance_by_config(config["model"])
-    dataset = init_instance_by_config(config["dataset"])
-
-    print("📊 正在训练...")
-    model.fit(dataset)
-
-    # 保存模型
-    model_dir = Path(MODEL_SAVE_DIR)
-    model_dir.mkdir(exist_ok=True)
-    model_path = model_dir / "latest_model.pkl"
-
-    import pickle
-    with open(model_path, 'wb') as f:
-        pickle.dump(model, f)
-
-    print(f"✅ 模型已保存到: {model_path}")
-    return model, dataset
-
-
-def load_model():
-    """加载已保存的模型"""
-    import pickle
-    model_path = Path(MODEL_SAVE_DIR) / "latest_model.pkl"
-    if not model_path.exists():
-        print(f"❌ 模型不存在: {model_path}")
-        print("   请先运行: python scripts/daily_signal.py --train")
-        sys.exit(1)
-
-    with open(model_path, 'rb') as f:
-        return pickle.load(f)
-
-
-def generate_signals(config: dict, model=None, dataset=None):
+# ================================================================
+#  核心：从 mlruns 加载 run_strategy.py 训练好的模型
+# ================================================================
+def load_trained_model(experiment_name=None):
     """
-    生成今日交易信号
-    返回: [(stock_code, score, rank), ...] 按预测分数降序
+    从 qlib mlruns 中加载最近一次训练好的模型
+    experiment_name: 指定实验名，默认取最近一次
     """
-    qlib.init(**config["qlib_init"])
+    with R.start(experiment_name=experiment_name or "load_model", recorder_id=None):
+        pass  # 只初始化，不训练
+
+    # 获取最近的实验记录
+    if experiment_name:
+        exp = R.get_exp(experiment_name=experiment_name)
+    else:
+        # 遍历所有实验，找最近的
+        from mlflow.tracking import MlflowClient
+        client = MlflowClient()
+        experiments = client.search_experiments()
+        if not experiments:
+            print("❌ 没有找到任何实验，请先运行: python scripts/run_strategy.py")
+            sys.exit(1)
+
+        # 按最近修改时间排序
+        exp = None
+        latest_time = 0
+        for e in experiments:
+            runs = client.search_runs(experiment_ids=[e.experiment_id],
+                                      order_by=["attributes.start_time DESC"],
+                                      max_results=1)
+            if runs and runs[0].info.start_time > latest_time:
+                latest_time = runs[0].info.start_time
+                exp = e
+
+        if exp is None:
+            print("❌ 没有找到训练记录，请先运行: python scripts/run_strategy.py")
+            sys.exit(1)
+
+    # 获取最近一次 run
+    recorder = R.get_recorder(experiment_name=exp.name)
+    model = recorder.load_object("models/model.pkl")
 
     if model is None:
-        model = load_model()
+        print(f"❌ 实验 [{exp.name}] 中没有保存的模型")
+        print("   请先运行: python scripts/run_strategy.py")
+        sys.exit(1)
 
-    # 获取股票池最新数据
+    print(f"✅ 模型已加载 (实验: {exp.name})")
+    return model
+
+
+# ================================================================
+#  信号生成
+# ================================================================
+def generate_signals(config, model):
+    """
+    用已训练好的模型对最新数据生成预测
+    返回: (top_stocks, bottom_stocks)
+    """
+    qlib.init(**config["qlib_init"])
+
     instruments = config["dataset"]["kwargs"]["handler"]["kwargs"]["instruments"]
-
-    # 使用今天作为预测日期（如果是非交易日会自动取最近交易日）
-    today = get_today_str()
-
-    print(f"\n📅 生成信号日期: {today}")
     print(f"📈 股票池: {instruments}")
 
-    # 获取特征数据并预测
-    if dataset is None:
-        dataset = init_instance_by_config(config["dataset"])
-
-    # 生成预测
+    # 构建 dataset（只用最新数据，不需要训练集）
+    dataset = init_instance_by_config(config["dataset"])
     pred = model.predict(dataset)
-    if pred is None or len(pred) == 0:
-        print("❌ 预测结果为空，请检查数据和模型")
-        return []
 
-    # 取最新一天的预测结果
-    if hasattr(pred, 'index'):
-        # 如果是 Series/DataFrame
-        latest_date = pred.index.get_level_values(0).max() if hasattr(pred.index, 'get_level_values') else pred.index.max()
-        latest_pred = pred.loc[latest_date] if hasattr(pred, 'loc') else pred[pred.index == latest_date]
+    if pred is None or len(pred) == 0:
+        print("❌ 预测结果为空，请检查数据和 end_time 配置")
+        return [], []
+
+    # 取最新一天的预测
+    if hasattr(pred.index, "get_level_values"):
+        latest_date = pred.index.get_level_values(0).max()
+        latest_pred = pred.loc[latest_date]
     else:
         latest_pred = pred
 
-    # 排序，取 top-k
     topk = config["port_analysis_config"]["strategy"]["kwargs"]["topk"]
     n_drop = config["port_analysis_config"]["strategy"]["kwargs"]["n_drop"]
 
-    # 转为 list 排序
-    if hasattr(latest_pred, 'sort_values'):
-        sorted_pred = latest_pred.sort_values(ascending=False)
-        top_stocks = [(str(idx), float(val), rank+1)
-                      for rank, (idx, val) in enumerate(sorted_pred.head(topk).items())]
-        bottom_stocks = [(str(idx), float(val), len(sorted_pred) - rank)
-                         for rank, (idx, val) in enumerate(sorted_pred.tail(n_drop).items())]
-    else:
-        # 如果是 ndarray 等
-        import numpy as np
-        if hasattr(latest_pred, 'values'):
-            vals = latest_pred.values
-            idxs = latest_pred.index
-        else:
-            vals = latest_pred
-            idxs = list(range(len(vals)))
-
-        ranked = sorted(zip(idxs, vals), key=lambda x: x[1], reverse=True)
-        top_stocks = [(str(idx), float(val), rank+1)
-                      for rank, (idx, val) in enumerate(ranked[:topk])]
-        bottom_stocks = [(str(idx), float(val), len(ranked) - rank)
-                         for rank, (idx, val) in enumerate(ranked[-n_drop:])]
+    sorted_pred = latest_pred.sort_values(ascending=False)
+    top_stocks = [
+        (str(idx), float(val), rank + 1)
+        for rank, (idx, val) in enumerate(sorted_pred.head(topk).items())
+    ]
+    bottom_stocks = [
+        (str(idx), float(val), rank + 1)
+        for rank, (idx, val) in enumerate(sorted_pred.tail(n_drop).items())
+    ]
 
     return top_stocks, bottom_stocks
 
 
-def generate_trade_plan(config: dict, top_stocks, bottom_stocks, portfolio: dict) -> dict:
-    """
-    根据信号和当前持仓，生成具体的交易计划
-    """
+# ================================================================
+#  交易计划
+# ================================================================
+def generate_trade_plan(config, top_stocks, bottom_stocks, portfolio):
     topk = config["port_analysis_config"]["strategy"]["kwargs"]["topk"]
     total_capital = portfolio.get("cash", 100000) + sum(
         h.get("value", 0) for h in portfolio.get("holdings", [])
@@ -179,201 +158,137 @@ def generate_trade_plan(config: dict, top_stocks, bottom_stocks, portfolio: dict
 
     current_holdings = {h["code"]: h for h in portfolio.get("holdings", [])}
     target_codes = {s[0] for s in top_stocks}
-
-    buys = []
-    sells = []
-
-    # 卖出：当前持仓中不在 target 里的，且在 bottom 中的
     bottom_codes = {s[0] for s in bottom_stocks}
-    for code, holding in current_holdings.items():
-        if code in bottom_codes:
-            sells.append({
-                "action": "SELL",
-                "code": code,
-                "reason": f"排名跌出，预测分数={dict(bottom_stocks).get(code, 'N/A')}",
-            })
 
-    # 买入：target 中当前未持仓的
-    for code, score, rank in top_stocks:
-        if code not in current_holdings:
-            alloc = total_capital / topk
-            buys.append({
-                "action": "BUY",
-                "code": code,
-                "score": round(score, 6),
-                "rank": rank,
-                "suggest_amount": round(alloc, 0),
-            })
+    sells = [
+        {"action": "SELL", "code": code, "reason": "排名跌出"}
+        for code in current_holdings
+        if code in bottom_codes
+    ]
+
+    buys = [
+        {
+            "action": "BUY",
+            "code": code,
+            "score": round(score, 6),
+            "rank": rank,
+            "suggest_amount": round(total_capital / topk, 0),
+        }
+        for code, score, rank in top_stocks
+        if code not in current_holdings
+    ]
 
     return {
-        "date": get_today_str(),
+        "date": datetime.now().strftime("%Y-%m-%d"),
         "total_capital": round(total_capital, 2),
-        "current_holdings_count": len(current_holdings),
-        "target_holdings_count": topk,
+        "current_holdings": len(current_holdings),
+        "target": topk,
         "sells": sells,
         "buys": buys,
     }
 
 
-def print_signal_report(top_stocks, bottom_stocks, trade_plan):
-    """打印信号报告"""
+# ================================================================
+#  输出报告
+# ================================================================
+def print_report(top_stocks, bottom_stocks, trade_plan):
+    today = datetime.now().strftime("%Y-%m-%d")
     print("\n" + "=" * 60)
-    print(f"📋 交易信号报告 - {get_today_str()}")
+    print(f"📋 交易信号报告 — {today}")
     print("=" * 60)
 
-    print(f"\n🟢 买入信号 (Top {len(top_stocks)}):")
+    print(f"\n🟢 买入候选 (Top {len(top_stocks)}):")
     print(f"{'排名':>4}  {'股票代码':<12}  {'预测分数':>12}")
     print("-" * 35)
-    for code, score, rank in top_stocks[:10]:  # 只显示前10
+    for code, score, rank in top_stocks:
         print(f"{rank:>4}  {code:<12}  {score:>12.6f}")
-    if len(top_stocks) > 10:
-        print(f"      ... 还有 {len(top_stocks) - 10} 只")
 
-    print(f"\n🔴 卖出信号 (Bottom {len(bottom_stocks)}):")
-    print(f"{'股票代码':<12}  {'预测分数':>12}")
-    print("-" * 30)
-    for code, score, _ in bottom_stocks:
-        print(f"{code:<12}  {score:>12.6f}")
+    print(f"\n🔴 卖出候选 (Bottom {len(bottom_stocks)}):")
+    for code, score, rank in bottom_stocks:
+        print(f"  {code:<12}  {score:>12.6f}")
 
-    # 交易计划
     print(f"\n📝 交易计划:")
     print(f"  总资金: ¥{trade_plan['total_capital']:,.0f}")
-    print(f"  当前持仓: {trade_plan['current_holdings_count']} 只")
-    print(f"  目标持仓: {trade_plan['target_holdings_count']} 只")
+    print(f"  当前持仓: {trade_plan['current_holdings']} → 目标: {trade_plan['target']}")
 
     if trade_plan["sells"]:
-        print(f"\n  ⬇️ 需要卖出 ({len(trade_plan['sells'])} 只):")
+        print(f"\n  ⬇️ 卖出:")
         for s in trade_plan["sells"]:
             print(f"    SELL {s['code']}  ({s['reason']})")
 
     if trade_plan["buys"]:
-        print(f"\n  ⬆️ 需要买入 ({len(trade_plan['buys'])} 只):")
+        print(f"\n  ⬆️ 买入:")
         for b in trade_plan["buys"]:
-            print(f"    BUY  {b['code']}  排名#{b['rank']}  建议金额:¥{b['suggest_amount']:,.0f}")
+            print(f"    BUY  {b['code']}  #{b['rank']}  ¥{b['suggest_amount']:,.0f}")
 
     if not trade_plan["sells"] and not trade_plan["buys"]:
-        print("\n  ✅ 今日无需调仓，持仓与目标一致")
+        print("\n  ✅ 无需调仓")
 
     print("\n" + "=" * 60)
 
 
-def update_portfolio_after_trade(portfolio: dict, trade_plan: dict):
-    """
-    根据交易计划更新持仓（简化版，实际执行后手动确认）
-    """
-    # 移除卖出的
-    sell_codes = {s["code"] for s in trade_plan["sells"]}
-    portfolio["holdings"] = [
-        h for h in portfolio["holdings"] if h["code"] not in sell_codes
-    ]
-
-    # 添加买入的
-    for b in trade_plan["buys"]:
-        portfolio["holdings"].append({
-            "code": b["code"],
-            "score": b["score"],
-            "rank": b["rank"],
-            "buy_date": get_today_str(),
-            "amount": b["suggest_amount"],
-            "value": b["suggest_amount"],
-        })
-
-    # 更新现金
-    sell_amount = sum(b.get("suggest_amount", 0) for b in trade_plan["buys"])
-    buy_amount = sum(s.get("suggest_amount", 0) for s in trade_plan["sells"])
-    portfolio["cash"] = portfolio.get("cash", 100000) - sell_amount + buy_amount
-
-    return portfolio
-
-
+# ================================================================
+#  主入口
+# ================================================================
 def main():
-    parser = argparse.ArgumentParser(description="每日交易信号生成器")
-    parser.add_argument("--config", default=CONFIG_PATH, help="配置文件路径")
-    parser.add_argument("--portfolio", default=PORTFOLIO_FILE, help="持仓文件路径")
-    parser.add_argument("--train", action="store_true", help="重新训练模型")
-    parser.add_argument("--output", default=None, help="输出信号到文件")
+    parser = argparse.ArgumentParser(description="每日交易信号（纯推理，不训练）")
+    parser.add_argument("--config", default=CONFIG_PATH)
+    parser.add_argument("--experiment", default=None,
+                        help="指定实验名（默认取最近一次训练）")
+    parser.add_argument("--output", default=None,
+                        help="输出信号到 JSON 文件")
     args = parser.parse_args()
 
-    # 加载配置
     config = load_config(args.config)
 
-    # 从配置读取调仓间隔
-    hold_days = config.get("port_analysis_config", {}).get("strategy", {}).get("kwargs", {}).get("hold_days", 1)
+    # ---- Step 1: 增量更新数据 ----
+    print("=" * 60)
+    print("📦 Step 1: 增量更新 qlib 数据")
+    print("=" * 60)
+    from scripts.update_daily_data import update_daily
+    latest_date = update_daily(
+        qlib_dir=config["qlib_init"]["provider_uri"],
+    )
 
-    # 是否需要训练
-    if args.train:
-        model, dataset = train_and_save(config)
-    else:
-        model = None
-        dataset = None
+    # 动态更新 config 的 end_time
+    if latest_date:
+        config["dataset"]["kwargs"]["handler"]["kwargs"]["end_time"] = str(latest_date)
+        config["port_analysis_config"]["backtest"]["end_time"] = str(latest_date)
+        print(f"📅 end_time 已更新为: {latest_date}\n")
 
-    # 加载持仓
-    portfolio = load_portfolio(args.portfolio)
+    # ---- Step 2: 加载模型 ----
+    print("=" * 60)
+    print("🧠 Step 2: 加载模型")
+    print("=" * 60)
+    model = load_trained_model(experiment_name=args.experiment)
 
-    # 检查是否是调仓日
-    if hold_days > 1:
-        last_rebalance = portfolio.get("last_rebalance", "")
-        today = get_today_str()
-
-        if last_rebalance:
-            from datetime import datetime as dt
-            last_date = dt.strptime(last_rebalance, "%Y-%m-%d")
-            today_date = dt.strptime(today, "%Y-%m-%d")
-            elapsed_days = (today_date - last_date).days
-
-            # 简单估算：大约1.4个交易日/自然日
-            # A股一年约244个交易日，365自然日，比例≈0.67
-            trading_days_est = int(elapsed_days * 0.67)
-
-            if trading_days_est < hold_days and elapsed_days > 0:
-                remaining = hold_days - trading_days_est
-                print(f"⏸️  今天不是调仓日")
-                print(f"   上次调仓: {last_rebalance}")
-                print(f"   已过约 {trading_days_est} 个交易日（自然日 {elapsed_days} 天）")
-                print(f"   距下次调仓还剩约 {remaining} 个交易日")
-                print(f"   持仓保持不变，不生成新信号")
-                print(f"\n   如需强制调仓：删除 portfolio.json 中的 last_rebalance 字段")
-                return
-            else:
-                print(f"📅 今天是调仓日（距上次 {elapsed_days} 自然日，约 {trading_days_est} 个交易日）")
-        else:
-            print("📅 首次运行，今日作为调仓日")
-
-    # 生成信号
-    top_stocks, bottom_stocks = generate_signals(config, model, dataset)
+    # ---- Step 3: 生成信号 ----
+    print("\n" + "=" * 60)
+    print("📊 Step 3: 生成预测信号")
+    print("=" * 60)
+    top_stocks, bottom_stocks = generate_signals(config, model)
 
     if not top_stocks:
-        print("❌ 未能生成信号，请检查配置和数据")
-        return
+        print("❌ 没有生成任何信号")
+        sys.exit(1)
 
-    # 生成交易计划
+    # ---- Step 4: 交易计划 ----
+    portfolio = load_portfolio()
     trade_plan = generate_trade_plan(config, top_stocks, bottom_stocks, portfolio)
 
-    # 打印报告
-    print_signal_report(top_stocks, bottom_stocks, trade_plan)
+    # ---- 输出 ----
+    print_report(top_stocks, bottom_stocks, trade_plan)
 
-    # 输出到文件
+    # 保存到文件
     if args.output:
-        with open(args.output, 'w', encoding='utf-8') as f:
-            json.dump({
-                "signals": {
-                    "top": [(c, s, r) for c, s, r in top_stocks],
-                    "bottom": [(c, s, r) for c, s, r in bottom_stocks],
-                },
-                "trade_plan": trade_plan,
-            }, f, ensure_ascii=False, indent=2)
-        print(f"\n📁 信号已保存到: {args.output}")
-
-    # 询问是否更新持仓
-    print(f"\n💾 持仓文件: {args.portfolio}")
-    print(f"   调仓间隔: 每 {hold_days} 个交易日")
-    print(f"   执行完交易后，更新 portfolio.json 并记录 last_rebalance 日期")
-
-    # 自动记录调仓日期到 portfolio
-    if trade_plan["sells"] or trade_plan["buys"]:
-        portfolio["last_rebalance"] = get_today_str()
-        save_portfolio(args.portfolio, portfolio)
-        print(f"   ✅ 已自动记录调仓日期: {get_today_str()}")
+        result = {
+            "top_stocks": top_stocks,
+            "bottom_stocks": bottom_stocks,
+            "trade_plan": trade_plan,
+        }
+        with open(args.output, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        print(f"\n💾 信号已保存到: {args.output}")
 
 
 if __name__ == "__main__":

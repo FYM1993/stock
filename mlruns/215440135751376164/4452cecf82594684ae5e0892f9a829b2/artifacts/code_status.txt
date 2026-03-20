@@ -1,0 +1,61 @@
+位于分支 main
+您的分支与上游分支 'origin/main' 一致。
+
+尚未暂存以备提交的变更：
+  （使用 "git add/rm <文件>..." 更新要提交的内容）
+  （使用 "git restore <文件>..." 丢弃工作区的改动）
+	修改：     config.yaml
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_cached.txt
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_diff.txt
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/code_status.txt
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/label.pkl
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicator_analysis_1day.pkl
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day.pkl
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/indicators_normal_1day_obj.pkl
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/port_analysis_1day.pkl
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/positions_normal_1day.pkl
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/portfolio_analysis/report_normal_1day.pkl
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/artifacts/pred.pkl
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/meta.yaml
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.annualized_return
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.information_ratio
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.max_drawdown
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.mean
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_with_cost.std
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.annualized_return
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.information_ratio
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.max_drawdown
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.mean
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.excess_return_without_cost.std
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.ffr
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pa
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/metrics/1day.pos
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/params/cmd-sys.argv
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.runName
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.git.commit
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.name
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.source.type
+	删除：     mlruns/347281245549811582/055cfb2c8006409181e629e5b19a205c/tags/mlflow.user
+	删除：     mlruns/347281245549811582/meta.yaml
+	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_cached.txt
+	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_diff.txt
+	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/artifacts/code_status.txt
+	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/meta.yaml
+	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/params/cmd-sys.argv
+	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.runName
+	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.git.commit
+	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.name
+	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.source.type
+	删除：     mlruns/691821883015000086/22676a1742ea480a9af520ff06af9d18/tags/mlflow.user
+	删除：     mlruns/691821883015000086/meta.yaml
+	修改：     scripts/daily_signal.py
+	修改：     scripts/periodic_topk_strategy.py
+	修改：     scripts/run_strategy.py
+
+未跟踪的文件:
+  （使用 "git add <文件>..." 以包含要提交的内容）
+	mlruns/215440135751376164/
+	mlruns/661605342228750048/
+	scripts/update_daily_data.py
+
+修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）

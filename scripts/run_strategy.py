@@ -22,7 +22,11 @@ from qlib.workflow import R
 from qlib.workflow.record_temp import SignalRecord, PortAnaRecord
 from qlib.utils import init_instance_by_config
 
+# 添加 scripts 目录到 Python 路径，以便导入自定义策略
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root / "scripts"))
 
+ 
 def load_config(config_path: str = "config.yaml") -> dict:
     """加载配置文件"""
     config_file = Path(config_path)
