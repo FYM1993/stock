@@ -16,6 +16,7 @@ A股量化策略
 import sys
 import yaml
 from pathlib import Path
+from datetime import datetime
 
 import qlib
 from qlib.workflow import R
@@ -25,6 +26,9 @@ from qlib.utils import init_instance_by_config
 # 添加 scripts 目录到 Python 路径，以便导入自定义策略
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root / "scripts"))
+
+# 报告目录
+REPORTS_DIR = Path("reports")
 
  
 def load_config(config_path: str = "config.yaml") -> dict:
@@ -39,6 +43,136 @@ def load_config(config_path: str = "config.yaml") -> dict:
         config = yaml.safe_load(f)
     
     return config
+
+
+def generate_backtest_report(exp_name, recorder, config):
+    """生成回测报告 Markdown 文件"""
+    try:
+        # 加载持仓数据
+        positions = recorder.load_object("portfolio_analysis/positions_normal_1day.pkl")
+        
+        # 加载回测指标
+        report = recorder.load_object("portfolio_analysis/report_normal_1day.pkl")
+        
+        if positions is None or report is None:
+            print("⚠️  未找到回测数据，跳过报告生成")
+            return
+        
+        # 处理持仓数据
+        import pandas as pd
+        if isinstance(positions, dict) and 'stock' in positions:
+            positions = positions['stock']
+        
+        # 计算每只股票的收益贡献
+        stock_contributions = {}
+        if isinstance(positions, pd.DataFrame):
+            for col in positions.columns:
+                if col not in ['cash', 'now_account_value', 'today_account_value']:
+                    stock_data = positions[col].dropna()
+                    if len(stock_data) > 0:
+                        stock_contributions[col] = {
+                            'total': stock_data.sum(),
+                            'days': len(stock_data),
+                            'avg': stock_data.mean()
+                        }
+        
+        # 排序
+        sorted_stocks = sorted(stock_contributions.items(), 
+                              key=lambda x: x[1]['total'], 
+                              reverse=True)
+        
+        # 提取回测指标
+        metrics_with_cost = report.get('excess_return_with_cost', {})
+        metrics_without_cost = report.get('excess_return_without_cost', {})
+        
+        # 生成 Markdown 内容
+        md_content = f"""# 回测报告 — {exp_name}
+
+生成时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+---
+
+## 📊 回测指标
+
+### ✅ 考虑交易成本
+- **年化收益率**: {metrics_with_cost.get('annualized_return', 0):.2%}
+- **信息比率**: {metrics_with_cost.get('information_ratio', 0):.4f}
+- **最大回撤**: {metrics_with_cost.get('max_drawdown', 0):.2%}
+
+### ℹ️ 不考虑交易成本
+- **年化收益率**: {metrics_without_cost.get('annualized_return', 0):.2%}
+- **信息比率**: {metrics_without_cost.get('information_ratio', 0):.4f}
+- **最大回撤**: {metrics_without_cost.get('max_drawdown', 0):.2%}
+
+---
+
+## 🟢 盈利贡献 Top 10
+
+| 排名 | 股票代码 | 累计贡献 | 持仓天数 | 日均贡献 |
+|------|----------|----------|----------|----------|
+"""
+        
+        for i, (stock, data) in enumerate(sorted_stocks[:10], 1):
+            md_content += f"| {i} | {stock} | {data['total']:,.2f} | {data['days']} | {data['avg']:,.4f} |\n"
+        
+        md_content += """
+---
+
+## 🔴 亏损贡献 Top 10
+
+| 排名 | 股票代码 | 累计贡献 | 持仓天数 | 日均贡献 |
+|------|----------|----------|----------|----------|
+"""
+        
+        for i, (stock, data) in enumerate(sorted_stocks[-10:], 1):
+            md_content += f"| {i} | {stock} | {data['total']:,.2f} | {data['days']} | {data['avg']:,.4f} |\n"
+        
+        # 统计信息
+        total_positive = sum(1 for s, d in stock_contributions.items() if d['total'] > 0)
+        total_negative = sum(1 for s, d in stock_contributions.items() if d['total'] < 0)
+        total_profit = sum(d['total'] for s, d in stock_contributions.items() if d['total'] > 0)
+        total_loss = sum(d['total'] for s, d in stock_contributions.items() if d['total'] < 0)
+        
+        md_content += f"""
+---
+
+## 📈 统计信息
+
+- 总交易股票数: {len(stock_contributions)}
+- 盈利股票数: {total_positive} ({total_positive/len(stock_contributions)*100:.1f}%)
+- 亏损股票数: {total_negative} ({total_negative/len(stock_contributions)*100:.1f}%)
+- 总盈利贡献: ¥{total_profit:,.2f}
+- 总亏损贡献: ¥{total_loss:,.2f}
+- 净收益: ¥{total_profit + total_loss:,.2f}
+
+---
+
+## ⚙️ 配置信息
+
+- 股票池: {config.get('market', 'N/A')}
+- 持仓数量: {config.get('port_analysis_config', {}).get('strategy', {}).get('kwargs', {}).get('topk', 'N/A')}
+- 回测周期: {config.get('dataset', {}).get('kwargs', {}).get('handler', {}).get('kwargs', {}).get('start_time', 'N/A')} 至 {config.get('dataset', {}).get('kwargs', {}).get('handler', {}).get('kwargs', {}).get('end_time', 'N/A')}
+"""
+        
+        # 保存报告
+        REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        report_path = REPORTS_DIR / f"{exp_name}.md"
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(md_content)
+        
+        print(f"📄 回测报告已保存: {report_path}")
+        
+        # 在终端输出盈利 Top 10
+        print("\n📊 盈利贡献 Top 10:")
+        print(f"{'排名':<6}{'股票代码':<12}{'累计贡献':>15}{'持仓天数':>12}{'日均贡献':>15}")
+        print("-" * 70)
+        for i, (stock, data) in enumerate(sorted_stocks[:10], 1):
+            print(f"{i:<6}{stock:<12}{data['total']:>15,.2f}{data['days']:>12}{data['avg']:>15,.4f}")
+        
+    except Exception as e:
+        print(f"⚠️  生成报告失败: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def print_config_summary(config: dict):
@@ -121,6 +255,12 @@ def run_strategy(config: dict):
                 print()
         except Exception as e:
             print(f"⚠️  无法显示指标详情: {e}")
+        
+        # 生成回测报告
+        print("=" * 60)
+        print("📝 生成回测报告...")
+        print("=" * 60)
+        generate_backtest_report(exp_name, rec, config)
 
 
 def main():

@@ -14,13 +14,13 @@ qlib_init:
 #   - csi1000: 中证1000（小盘股）
 #   - all: 全市场所有股票
 #   - all_except_688_BJ: 全市场所有股票，不包括科创板和北交所
-market: "csi300"
+market: "csi1000"
 
 # benchmark: 基准指数，用于计算超额收益
 #   - SH000300: 沪深300指数
 #   - SH000905: 中证500指数
 #   - SH000852: 中证1000指数
-benchmark: "SH000300"
+benchmark: "SH000852"
 
 # ==================== 模型配置 ====================
 model:
@@ -81,7 +81,7 @@ dataset:
         fit_start_time: "2015-01-01"   # 训练集开始
         fit_end_time: "2023-12-31"     # 训练集结束
         
-        instruments: "csi300"          # 股票池（需与上面market保持一致）
+        instruments: "csi1000"          # 股票池（需与上面market保持一致）
         
         # 推理时的数据处理（用于预测）
         infer_processors:
@@ -117,16 +117,16 @@ port_analysis_config:
     module_path: "periodic_topk_strategy"
     kwargs:
       signal: "<PRED>"                 # 使用模型预测值作为信号
-      topk: 30                         # 持仓数量
-      n_drop: 5                        # 每次调仓最多换5只
-      hold_days: 5                     # ★ 每x个交易日调仓一次
+      topk: 3                         # 持仓数量
+      n_drop: 3                        # 每次调仓最多换x只
+      hold_days: 2                    # ★ 每x个交易日调仓一次
   
   # 回测引擎配置
   backtest:
     start_time: "2025-01-01"           # 回测开始日期
     end_time: "2026-03-19"             # 回测结束日期
-    account: 100000                    # 初始资金：10万元
-    benchmark: "SH000300"              # 基准指数（用于计算超额收益）
+    account: 150000                    # 初始资金：10万元
+    benchmark: "SH000852"              # 基准指数（用于计算超额收益）
     
     # 交易所配置
     exchange_kwargs:

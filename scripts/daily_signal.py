@@ -346,7 +346,7 @@ def main():
     
     # 检查当前数据的最新日期
     qlib_dir = config["qlib_init"]["provider_uri"]
-    calendar, _ = load_calendar(qlib_dir)
+    calendar, cal_dict = load_calendar(qlib_dir)
     
     if calendar:
         latest_date = calendar[-1]
@@ -354,12 +354,17 @@ def main():
         print(f"📅 数据最新日期: {latest_date}")
         print(f"📅 今天日期: {today}")
         
-        # 如果数据已是今天或更新（周末/节假日可能数据日期早于今天）
-        if latest_date >= today:
-            print("✅ 数据已是最新，跳过更新步骤\n")
+        # 检查今天是否是交易日
+        if today in cal_dict:
+            # 今天是交易日
+            if latest_date < today:
+                print("⬇️  今天是交易日且数据未更新，开始下载...\n")
+                latest_date = update_daily(qlib_dir=qlib_dir)
+            else:
+                print("✅ 数据已是最新（包含今天），跳过更新步骤\n")
         else:
-            print("⬇️  数据需要更新，开始下载...\n")
-            latest_date = update_daily(qlib_dir=qlib_dir)
+            # 今天不是交易日（周末/节假日）
+            print(f"ℹ️  今天非交易日，数据已是最新交易日 ({latest_date})，跳过更新步骤\n")
     else:
         print("⚠️  未找到 calendar 数据，将下载最新数据...\n")
         latest_date = update_daily(qlib_dir=qlib_dir)
